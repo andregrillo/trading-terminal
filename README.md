@@ -30,6 +30,24 @@ Node.js 18 or later is required. There are no npm dependencies to install.
 The folder retains its original name, `quant-terminal`, so saved paths and
 startup shortcuts continue to work.
 
+## On your iPhone
+
+Open the private Tailscale address in Safari. The phone layout has just
+**Watchlist** and **Chart** tabs. Tap a watchlist symbol to open its chart.
+The pencil button opens the drawing tools; choosing a tool closes that drawer.
+Timeframes, indicators and extra chart controls have their own bottom buttons.
+
+Double-tap the background of the price pane or an indicator pane to expand it.
+Double-tap again, or tap the restore button at the top right, to bring back all
+panes with their previous sizes. Double-tapping a drawing still opens its settings.
+The Indicators menu has settings, visibility and up/down pane controls.
+
+This layout applies only to small touch screens, including phone landscape.
+Your Mac keeps its existing interface, even in a narrow browser window. A saved
+multi-chart layout is shown one chart at a time on the phone; choose another from
+the ⋯ menu. The desktop layout stays saved. The phone's asset-card size and
+collapsed state are separate from the Mac's preferences.
+
 ## Watchlists
 
 Use **+ Section** to create named groups within a watchlist. Drag symbols into a
@@ -41,7 +59,7 @@ Click the flag beside any watchlist symbol to choose one of eight colours or cle
 it. The Show menu filters the current list or displays automatic colour groups
 across all lists. A symbol's flag follows it between lists and saves in the existing
 `data/state.json` file. Option/Alt-Enter toggles the current chart symbol's flag.
-On a phone, open the watchlist with the list icon at the top of the left toolbar.
+On a phone, open the watchlist with the **Watchlist** tab at the bottom.
 
 ## Selected asset details
 

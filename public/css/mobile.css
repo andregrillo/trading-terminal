@@ -1,0 +1,66 @@
+/* Every rule is gated by a class enabled only on small, coarse-pointer devices. */
+body.mobile-ui { height: 100dvh; display: flex; flex-direction: column; box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); overflow: hidden; overscroll-behavior: none; }
+.mobile-ui > .topbar, .mobile-ui #bottom, .mobile-ui #sideTabs, .mobile-ui .mobile-side-head, .mobile-ui #mobileWatchlist, .mobile-ui #drawbar .mobile-watchlist-control { display: none !important; }
+.mobile-ui > .main { position: relative; flex: 1; height: auto; min-height: 0; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.mobile-ui .center { width: 100%; flex: 1; min-width: 0; }
+.mobile-ui #grid { grid-template-columns: 1fr !important; grid-template-rows: 1fr !important; }
+.mobile-ui #grid > .pane { grid-row: 1 !important; grid-column: 1 !important; }
+.mobile-ui #grid > .pane:not(.active) { display: none; }
+.mobile-ui .drawbar { display: none; }
+.mobile-ui.mobile-drawings-open .drawbar { display: flex; position: absolute; left: env(safe-area-inset-left, 0px); top: 0; bottom: 0; width: 48px; z-index: 25; background: var(--panel); border-right: 1px solid var(--border); box-shadow: var(--shadow); padding-top: 4px; }
+.mobile-ui .drawbar button { width: 40px; height: 40px; }
+.mobile-ui .side, .mobile-ui .side.mobile-open { display: none; }
+.mobile-ui.mobile-view-watchlist .center, .mobile-ui.mobile-view-watchlist .drawbar { display: none !important; }
+.mobile-ui.mobile-view-watchlist .side { display: flex; position: relative; inset: auto; z-index: 1; width: 100%; flex: 1; border: 0; box-shadow: none; }
+.mobile-ui .wl-head #wlNew, .mobile-ui .wl-head #wlDel, .mobile-ui #wlSectionNew, .mobile-ui [data-asset-more-news] { display: none; }
+.mobile-ui .mobile-watchlist-heading { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; border-bottom: 1px solid var(--border); font-size: 18px; }
+.mobile-ui .mobile-watchlist-heading button { width: 40px; height: 40px; padding: 8px; background: transparent; color: var(--text); border: 0; }
+.mobile-ui .legend { font-size: 10px; }
+.mobile-ui .legend .title { font-size: 12px; max-width: calc(100% - 36px); overflow: hidden; text-overflow: ellipsis; }
+.mobile-ui .legend .main-header { flex-wrap: wrap; gap: 0 6px; }
+.mobile-ui .legend .ohlc { flex: 0 0 100%; font-size: 11px; }
+.mobile-ui .legend .ohlc > span { display: none; }
+.mobile-ui .legend .ohlc > span:nth-child(4), .mobile-ui .legend .ohlc > span:last-child { display: inline; }
+.mobile-ui .legend .ohlc b { display: none; }
+.mobile-ui .legend .row.ind { flex-wrap: nowrap; line-height: 18px; gap: 6px; }
+.mobile-ui .legend .ind .vals { order: 0; flex: 0 1 auto; line-height: 18px; }
+.mobile-ui .legend .ind .name { flex: 0 1 auto; cursor: pointer; }
+.mobile-ui .legend .ind .acts { display: none !important; }
+.mobile-ui .legend .note { font-size: 10px; }
+.mobile-ui .legend .legend-toggle { min-width: 26px; height: 24px; }
+.mobile-ui .drawing-toolbar button { width: 34px; height: 36px; }
+.mobile-ui [data-mobile-focus="indicator"] .drawing-toolbar { display: none !important; }
+.mobile-pane-restore { position: absolute; top: 5px; right: 70px; z-index: 9; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--panel); }
+.mobile-shell { flex: none; background: var(--bg); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.mobile-chart-tools { display: flex; align-items: center; height: 46px; padding: 0 6px; border-bottom: 1px solid var(--border); gap: 2px; }
+.mobile-view-watchlist .mobile-chart-tools { display: none; }
+.mobile-chart-tools button { height: 42px; min-width: 40px; display: inline-flex; justify-content: center; align-items: center; padding: 0 9px; background: transparent; border: 0; color: var(--text); border-radius: 5px; }
+.mobile-chart-tools button svg { width: 23px; height: 23px; }
+.mobile-chart-tools [data-mobile="symbol"] { flex: 1; min-width: 0; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; display: block; text-align: left; }
+.mobile-chart-tools [data-mobile="timeframe"] { font-size: 13px; padding: 0 6px; }
+.mobile-chart-tools button.active { color: var(--accent); background: var(--accent-soft); }
+.mobile-tabs { display: flex; height: 52px; }
+.mobile-tabs button { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--muted); font-size: 10px; }
+.mobile-tabs button svg { width: 22px; height: 22px; }
+.mobile-tabs button.active { color: var(--accent); }
+.mobile-ui button { touch-action: manipulation; }
+.mobile-ui input, .mobile-ui select, .mobile-ui textarea { font-size: 16px; }
+.mobile-ui .modal { padding: max(12px, env(safe-area-inset-top, 0px)) 10px max(12px, env(safe-area-inset-bottom, 0px)); align-items: flex-end; }
+.mobile-ui .modal-card { width: 100%; max-height: 88dvh; max-width: 600px; border-radius: 14px 14px 8px 8px; }
+.mobile-ui .modal-body { padding: 12px; }
+.mobile-ui .modal-head { font-size: 15px; }
+.mobile-ui .modal-head button { width: 32px; height: 32px; }
+.mobile-ui .modal-foot .btn { min-height: 38px; }
+.mobile-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mobile-menu button { min-height: 44px; text-align: left; padding: 9px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--panel); font-size: 13px; }
+.mobile-menu button.active { color: var(--accent); border-color: var(--accent); }
+.mobile-menu .mobile-field { grid-column: 1 / -1; }
+.mobile-menu input { width: 100%; min-height: 40px; }
+.mobile-indicator-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.mobile-indicator-row > span { display: block; font-size: 12px; margin-bottom: 6px; }
+.mobile-indicator-actions { display: flex; gap: 5px; }
+.mobile-indicator-actions button { display: grid; place-items: center; width: 38px; height: 36px; border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--panel); }
+.mobile-indicator-actions button:disabled { opacity: .3; }
+.mobile-add-indicator { margin-top: 12px; min-height: 42px; width: 100%; }
+.mobile-ui .toasts { bottom: calc(108px + env(safe-area-inset-bottom, 0px)); right: 8px; left: 8px; align-items: flex-end; }
+.mobile-ui .replay-bar { bottom: 5px; flex-wrap: wrap; }

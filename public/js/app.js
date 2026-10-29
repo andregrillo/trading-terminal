@@ -10,6 +10,7 @@ import {
 } from "../lib/indicators.js";
 import { parseTf, toCsv } from "../lib/series.js";
 import { initPanels } from "./panels.js";
+import { MobileUI } from "./mobile-ui.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const TF_QUICK = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"];
@@ -84,6 +85,8 @@ class App {
     this.setLayout(this.state.layout, false);
     this.panels = initPanels(this);
     this.bindKeys();
+    this.mobileUI = new MobileUI(this);
+    this.mobileUI.start();
     this.listenAlerts();
     this.checkHealth();
     setInterval(() => this.checkHealth(), 60000);
@@ -338,6 +341,7 @@ class App {
     $("#chartType").value = p.cfg.type;
     $("#logBtn").classList.toggle("on", !!p.cfg.log);
     $("#replayBtn").classList.toggle("on", !!p.replay);
+    this.mobileUI?.sync();
   }
 
   setTf(tf) {
@@ -401,6 +405,7 @@ class App {
       .forEach((b) => b.classList.toggle("active", b.dataset.tool === tool));
     for (const p of this.panes) p.setInteractive(tool === "cursor");
     document.body.style.cursor = tool === "cursor" ? "" : "crosshair";
+    this.mobileUI?.onToolChange();
   }
 
   // ---------- modals ----------

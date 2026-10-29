@@ -18,6 +18,7 @@ import {
 import { DrawingLayer, TOOL_BY_ID } from "./drawings.js";
 import { DrawingEditor } from "./drawing-editor.js";
 import { ChartLegends } from "./chart-legends.js";
+import { phoneFocusIndex } from "./mobile-pane-focus.js";
 import { indicatorPaneGroups, movePaneOrder } from "../lib/indicator-panes.js";
 import { VolumeProfile, SessionVolumeProfile } from "./volume-profile.js";
 
@@ -622,8 +623,8 @@ export class ChartPane {
   }
 
   renderIndicators() {
-    const mainStretch = this.indicatorPaneGroups ? this.chart.panes()[0].getStretchFactor() : 1;
-    const stretch = new Map((this.indicatorPaneGroups || []).map(group => [group.root, this.chart.panes()[group.index]?.getStretchFactor()]));
+    const mainStretch = this.mobilePaneSnapshot?.mainStretch ?? (this.indicatorPaneGroups ? this.chart.panes()[0].getStretchFactor() : 1);
+    const stretch = this.mobilePaneSnapshot?.stretch || new Map((this.indicatorPaneGroups || []).map(group => [group.root, this.chart.panes()[group.index]?.getStretchFactor()]));
     for (const list of this.indSeries.values())
       for (const s of list) {
         try { this.chart.removeSeries(s); } catch { /* already gone */ }
@@ -649,19 +650,29 @@ export class ChartPane {
     const layout = indicatorPaneGroups(ordered, BY_ID, this.cfg.indicatorPaneOrder);
     const paneOf = this.indPaneOf = layout.paneOf;
     this.indicatorPaneGroups = layout.groups;
+    const focusIndex = phoneFocusIndex(this, layout.groups);
+    if (this.mobilePaneSnapshot) {
+      const indicatorFocus = focusIndex !== null && focusIndex > 0;
+      this.main.applyOptions({ visible: indicatorFocus ? false : this.mobilePaneSnapshot.mainVisible });
+      this.volume?.applyOptions({ visible: indicatorFocus ? false : this.mobilePaneSnapshot.volumeVisible });
+      for (const series of this.compareSeries.values()) series.applyOptions({ visible: !indicatorFocus });
+      if (indicatorFocus) this.main.priceScale().applyOptions({ mode: LW.PriceScaleMode.Normal, ...(!this.mobileFocusScaleReady ? { autoScale: true } : {}) });
+      this.mobileFocusScaleReady = indicatorFocus;
+    }
     const markers = [];
     for (const ind of ordered) {
       const def = BY_ID[ind.id];
       if (!def) continue;
       const src = String(ind.params?.source || "");
       const parentPane = src.startsWith("ind:") ? paneOf[src.split(":")[1]] : undefined;
-      const pane = paneOf[ind.uid];
+      const logicalPane = paneOf[ind.uid], excluded = focusIndex !== null && logicalPane !== focusIndex;
+      const pane = focusIndex !== null ? 0 : logicalPane;
       // Keep a header in its own pane even while its plots are hidden, loading or in error.
-      while (this.chart.panes().length <= pane) this.chart.addPane(true);
+      if (!excluded) while (this.chart.panes().length <= pane) this.chart.addPane(true);
       let res;
       try { res = n ? this.computeIndicator(ind, bars) : {}; } catch (e) { res = { error: e.message }; }
       this.indResults[ind.uid] = res;
-      if (ind.hidden || !n) continue;
+      if (excluded || ind.hidden || !n) continue;
       if (res.markers && !ind.tf) markers.push(...res.markers);
       if (res.rectangles || res.priceLabels) {
         const colors = Object.fromEntries(def.outputs.map((out) => [out.key, indicatorColor(out, ind.colors)]));
@@ -696,7 +707,7 @@ export class ChartPane {
           ...(Number.isInteger(def.precision) ? { priceFormat: { type: 'price', precision: def.precision, minMove: 10 ** -def.precision } } : {}),
           color,
           priceLineVisible: false,
-          lastValueVisible: pane > 0,
+          lastValueVisible: logicalPane > 0,
           crosshairMarkerVisible: false,
           title: "",
         };
@@ -714,7 +725,12 @@ export class ChartPane {
       if (res.paneAnnotations) list[0].attachPrimitive(new IndicatorAnnotations(this, res.paneAnnotations));
       this.indSeries.set(ind.uid, list);
     }
-    this.chart.panes().forEach((p, i) => p.setStretchFactor(i === 0 ? mainStretch : stretch.get(this.indicatorPaneGroups[i - 1]?.root) || mainStretch * 0.28));
+    if (focusIndex > 0) {
+      // The hidden price series shares this scale; use the oscillator's number format.
+      const focusedSeries = this.indSeries.values().next().value?.[0];
+      if (focusedSeries) this.main.applyOptions({ priceFormat: focusedSeries.options().priceFormat });
+    }
+    this.chart.panes().forEach((p, i) => p.setStretchFactor(focusIndex !== null ? 1 : i === 0 ? mainStretch : stretch.get(this.indicatorPaneGroups[i - 1]?.root) || mainStretch * 0.28));
     const all = [...markers, ...this.extraMarkers]
       .map((m) => ({ ...m, time: this.toChart(m.time) }))
       .filter((m) => !this.replay || m.time <= this.times.at(-1));
@@ -811,7 +827,13 @@ export class ChartPane {
     for (const note of this.notes || [])
       html += `<div class="row note">${esc(note)}</div>`;
     headers.set(0, html);
+    const focusIndex = phoneFocusIndex(this);
+    if (focusIndex !== null) {
+      const focused = focusIndex === 0 ? html : collapsed ? '' : headers.get(focusIndex) || '';
+      headers.clear(); headers.set(0, focused);
+    }
     this.legends.render(headers);
+    this.app.mobileUI?.sync();
   }
 
   onLegendClick(e) {
@@ -846,6 +868,7 @@ export class ChartPane {
 
   // ---------- indicators ----------
   moveIndicatorPane(uid, direction) {
+    this.app.mobileUI?.restorePane(this);
     const pane = this.indPaneOf?.[uid]; if (!pane) return;
     const range = this.chart.timeScale().getVisibleLogicalRange();
     this.cfg.indicatorPaneOrder = movePaneOrder(this.indicatorPaneGroups, pane, direction);
@@ -862,6 +885,7 @@ export class ChartPane {
     return uid;
   }
   removeIndicator(uid) {
+    this.app.mobileUI?.restorePane(this);
     this.cfg.indicators = this.cfg.indicators.filter((x) => x.uid !== uid);
     this.render(false);
     this.app.persist();

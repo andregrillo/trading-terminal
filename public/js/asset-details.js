@@ -20,8 +20,9 @@ export class AssetDetails {
       <div class="asset-news-heading"><strong data-asset-news-heading>Latest news</strong><span data-asset-news-time></span></div><p class="asset-news-note" data-asset-news-note>Loading headlines…</p><div data-asset-news-list></div><button class="asset-more-news hidden" data-asset-more-news>More news →</button></div>`;
     side.appendChild(this.el);
     this.el.querySelector('[data-asset-collapse]').onclick = () => {
-      app.settings.assetDetailsCollapsed = !app.settings.assetDetailsCollapsed; app.persist(); this.applySize();
-      if (!app.settings.assetDetailsCollapsed) this.sync();
+      if (this.phone) this.app.mobileUI.assetCollapsed = !this.collapsed;
+      else { app.settings.assetDetailsCollapsed = !this.collapsed; app.persist(); }
+      this.applySize(); if (!this.collapsed) this.sync();
     };
     this.el.querySelector('[data-asset-refresh]').onclick = () => this.refresh();
     this.el.querySelector('[data-asset-about-more]').onclick = () => { this.aboutOpen = !this.aboutOpen; this.drawProfile(); };
@@ -36,30 +37,35 @@ export class AssetDetails {
     document.addEventListener('visibilitychange', this.wake);
     this.sync();
   }
+  get phone() { return !!this.app.mobileUI?.enabled; }
+  get collapsed() { return this.phone ? this.app.mobileUI.assetCollapsed : !!this.app.settings.assetDetailsCollapsed; }
+  get preferredHeight() { return this.phone ? this.app.mobileUI.assetHeight || 300 : this.app.settings.assetDetailsHeight || 420; }
+  set preferredHeight(value) { if (this.phone) this.app.mobileUI.assetHeight = value; else this.app.settings.assetDetailsHeight = value; }
+  saveSize() { if (!this.phone) this.app.persist(); }
   node(name) { return this.el.querySelector(`[data-asset-${name}]`); }
-  canLoad() { return this.visible && !this.app.settings.assetDetailsCollapsed && !document.hidden && !!this.side.getClientRects().length; }
+  canLoad() { return this.visible && !this.collapsed && !document.hidden && !!this.side.getClientRects().length; }
   setVisible(value) { this.visible = value; this.el.classList.toggle('hidden', !value); if (value) this.sync(); }
   applySize() {
     const max = Math.max(170, (this.side.clientHeight || innerHeight - 44) * .62);
-    this.height = Math.max(170, Math.min(Number(this.app.settings.assetDetailsHeight) || 420, max));
-    this.el.style.height = this.app.settings.assetDetailsCollapsed ? '36px' : `${this.height}px`;
-    this.el.classList.toggle('collapsed', !!this.app.settings.assetDetailsCollapsed);
-    this.node('collapse').setAttribute('aria-expanded', String(!this.app.settings.assetDetailsCollapsed));
+    this.height = Math.max(170, Math.min(Number(this.preferredHeight) || 420, max));
+    this.el.style.height = this.collapsed ? '36px' : `${this.height}px`;
+    this.el.classList.toggle('collapsed', !!this.collapsed);
+    this.node('collapse').setAttribute('aria-expanded', String(!this.collapsed));
     const handle = this.el.querySelector('[role="separator"]'); handle.setAttribute('aria-valuemin', '170'); handle.setAttribute('aria-valuemax', String(Math.round(max))); handle.setAttribute('aria-valuenow', String(Math.round(this.height)));
   }
   resizeControls() {
     const handle = this.el.querySelector('[role="separator"]');
     handle.addEventListener('pointerdown', (event) => {
-      if (this.app.settings.assetDetailsCollapsed) return;
+      if (this.collapsed) return;
       event.preventDefault(); const start = event.clientY, height = this.height; handle.setPointerCapture(event.pointerId);
-      const move = (e) => { this.app.settings.assetDetailsHeight = height + start - e.clientY; this.applySize(); };
-      const stop = () => { handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', stop); handle.removeEventListener('pointercancel', cancel); this.app.settings.assetDetailsHeight = this.height; this.app.persist(); };
-      const cancel = () => { handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', stop); handle.removeEventListener('pointercancel', cancel); this.app.settings.assetDetailsHeight = height; this.applySize(); };
+      const move = (e) => { this.preferredHeight = height + start - e.clientY; this.applySize(); };
+      const stop = () => { handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', stop); handle.removeEventListener('pointercancel', cancel); this.preferredHeight = this.height; this.saveSize(); };
+      const cancel = () => { handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', stop); handle.removeEventListener('pointercancel', cancel); this.preferredHeight = height; this.applySize(); };
       handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', stop); handle.addEventListener('pointercancel', cancel);
     });
     handle.onkeydown = (event) => {
       if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
-      event.preventDefault(); event.stopPropagation(); this.app.settings.assetDetailsHeight = this.height + (event.key === 'ArrowUp' ? 20 : -20); this.applySize(); this.app.persist();
+      event.preventDefault(); event.stopPropagation(); this.preferredHeight = this.height + (event.key === 'ArrowUp' ? 20 : -20); this.applySize(); this.saveSize();
     };
   }
   sync() {

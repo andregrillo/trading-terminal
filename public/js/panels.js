@@ -375,6 +375,7 @@ export function initPanels(app) {
         return drawRows();
       }
       app.setSymbol(row.dataset.sym);
+      app.mobileUI?.showChart();
     };
     $('#wlRows').oncontextmenu = (event) => {
       const row = event.target.closest('.wl-row');
@@ -1691,6 +1692,8 @@ export function initPanels(app) {
 
   // ---------- hooks for the app ----------
   P.showBottom = showBottom;
+  P.showWatchlist = () => showSide("watchlist");
+  P.refreshAssetDetails = () => { assetDetails.applySize(); assetDetails.sync(); };
   P.openAlertDialog = openAlertDialog;
   let lastSymbol = null;
   P.onActiveChange = () => {

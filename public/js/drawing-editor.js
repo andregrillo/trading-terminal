@@ -45,6 +45,7 @@ export class DrawingEditor {
     pane.chart.timeScale().subscribeVisibleLogicalRangeChange(this.rangeChanged);
   }
   position(e) {
+    if (this.app.mobileUI?.enabled && this.pane.mobilePaneFocus && this.pane.mobilePaneFocus !== 'price') return null;
     const rect = this.pane.chartEl.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
     const size = this.layer.size;
     return x >= 0 && x <= size.width && y >= 0 && y <= size.height ? { x, y } : null;
