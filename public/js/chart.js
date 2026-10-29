@@ -161,6 +161,7 @@ export class ChartPane {
     this.createChart();
     this.legends = new ChartLegends(this);
     el.addEventListener("pointerdown", () => app.setActive(this), true);
+    this.bindLiveRecovery();
   }
 
   // ---------- setup ----------
@@ -1002,14 +1003,37 @@ export class ChartPane {
   }
 
   // ---------- live updates ----------
-  startLive() {
+  bindLiveRecovery() {
+    this.liveEvents = new AbortController();
+    const wake = () => {
+      if (document.hidden) return;
+      clearTimeout(this.liveWakeTimer);
+      this.liveWakeTimer = setTimeout(() => {
+        if (this.replay) return;
+        if (!this.bars.length) return void this.load({ keepView: true });
+        this.startLive({ catchUp: true });
+      }, 100);
+    };
+    const options = { signal: this.liveEvents.signal };
+    document.addEventListener('visibilitychange', () => document.hidden ? this.stopLive() : wake(), options);
+    for (const event of ['pageshow', 'online', 'focus']) window.addEventListener(event, wake, options);
+  }
+
+  startLive({ catchUp = false } = {}) {
     this.stopLive();
-    if (this.replay || !this.bars.length) return;
+    if (document.hidden || this.replay || !this.bars.length) return;
+    const token = this.liveToken = {};
     const ex = exchange(this.cfg.symbol);
     const wsTf = BINANCE_WS_TF[this.cfg.tf];
-    if (ex === "BINANCE" && this.provider === "Binance" && wsTf)
-      this.openSocket(ticker(this.cfg.symbol).toLowerCase(), wsTf, 0);
-    else this.poll();
+    const connect = () => {
+      if (this.liveToken !== token) return;
+      if (ex === "BINANCE" && this.provider === "Binance" && wsTf)
+        this.openSocket(ticker(this.cfg.symbol).toLowerCase(), wsTf, 0);
+      else this.poll(!catchUp);
+    };
+    // Fill missing bars before the stream can jump ahead to the latest candle.
+    if (catchUp) this.refreshLive(true).then(connect);
+    else connect();
   }
 
   openSocket(sym, interval, hostIdx) {
@@ -1018,16 +1042,32 @@ export class ChartPane {
       "wss://data-stream.binance.vision/ws/",
     ];
     if (hostIdx >= hosts.length) return this.poll();
+    const token = this.liveToken;
     let opened = false;
     const ws = new WebSocket(`${hosts[hostIdx]}${sym}@kline_${interval}`);
     this.ws = ws;
+    const watch = (delay) => {
+      clearTimeout(this.liveSocketTimer);
+      this.liveSocketTimer = setTimeout(() => {
+        if (this.ws !== ws || this.liveToken !== token) return;
+        this.ws = null;
+        ws.close();
+        this.openSocket(sym, interval, hostIdx + 1);
+      }, delay);
+    };
+    watch(8000);
     ws.onopen = () => {
+      if (this.ws !== ws || this.liveToken !== token) return;
       opened = true;
+      watch(20000);
       this.app.setStatus("ok");
     };
     ws.onmessage = (m) => {
-      const k = JSON.parse(m.data).k;
-      if (k)
+      if (this.ws !== ws || this.liveToken !== token) return;
+      let k;
+      try { k = JSON.parse(m.data).k; } catch { return; }
+      if (k) {
+        watch(20000);
         this.merge([
           {
             time: k.t / 1000,
@@ -1038,36 +1078,59 @@ export class ChartPane {
             volume: +k.v,
           },
         ]);
+      }
     };
     ws.onclose = () => {
-      if (this.ws !== ws) return;
+      if (this.ws !== ws || this.liveToken !== token) return;
+      clearTimeout(this.liveSocketTimer);
       this.ws = null;
       if (!opened) this.openSocket(sym, interval, hostIdx + 1);
       else this.liveTimer = setTimeout(() => this.startLive(), 3000);
     };
   }
 
-  poll() {
+  poll(immediate = true) {
     const kind = ["BINANCE", "COINBASE", "KRAKEN"].includes(
       exchange(this.cfg.symbol),
     )
       ? 3000
       : 10000;
+    const token = this.liveToken;
     const tick = async () => {
-      try {
-        const r = await api.candles(this.cfg.symbol, this.cfg.tf, 5);
-        this.merge(r.candles);
-      } catch {
-        /* keep trying */
-      }
-      this.liveTimer = setTimeout(tick, kind);
+      if (this.liveToken !== token || this.replay) return;
+      await this.refreshLive();
+      if (this.liveToken === token && !this.replay) this.liveTimer = setTimeout(tick, kind);
     };
-    this.liveTimer = setTimeout(tick, kind);
+    // Recover immediately when a stream fails instead of waiting for the first interval.
+    if (immediate) tick();
+    else this.liveTimer = setTimeout(tick, kind);
+  }
+
+  async refreshLive(catchUp = false) {
+    const token = this.liveToken;
+    if (!token || this.replay || this.liveRequest) return;
+    const symbol = this.cfg.symbol, tf = this.cfg.tf;
+    const request = this.liveRequest = new AbortController();
+    const timeout = setTimeout(() => request.abort(), 15000);
+    try {
+      const r = await api.candles(symbol, tf, catchUp ? this.app.settings.bars || 3000 : 5, { signal: request.signal });
+      if (token === this.liveToken && !this.replay && symbol === this.cfg.symbol && tf === this.cfg.tf) this.merge(r.candles);
+    } catch {
+      // A lost network connection must not leave the polling loop waiting forever.
+    } finally {
+      clearTimeout(timeout);
+      if (this.liveRequest === request) this.liveRequest = null;
+    }
   }
 
   stopLive() {
     clearTimeout(this.liveTimer);
+    clearTimeout(this.liveSocketTimer);
+    clearTimeout(this.liveWakeTimer);
     this.liveTimer = null;
+    this.liveToken = null;
+    this.liveRequest?.abort();
+    this.liveRequest = null;
     if (this.ws) {
       const ws = this.ws;
       this.ws = null;
@@ -1236,6 +1299,7 @@ export class ChartPane {
   }
 
   destroy() {
+    this.liveEvents?.abort();
     this.stopLive();
     clearInterval(this.replayTimer);
     this.drawingEditor?.destroy();

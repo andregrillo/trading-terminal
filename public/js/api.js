@@ -1,7 +1,8 @@
 // Thin wrapper over the local server. Writes carry the x-qt header the server requires.
-async function req(method, url, body) {
+async function req(method, url, body, options = {}) {
   const res = await fetch(url, {
     method,
+    signal: options.signal,
     headers:
       body !== undefined
         ? { "Content-Type": "application/json", "x-qt": "1" }
@@ -25,10 +26,12 @@ export const api = {
   put: (u, b) => req("PUT", u, b ?? {}),
   patch: (u, b) => req("PATCH", u, b ?? {}),
   del: (u) => req("DELETE", u),
-  candles: (symbol, tf, limit = 3000) =>
+  candles: (symbol, tf, limit = 3000, options) =>
     req(
       "GET",
       `/api/candles?symbol=${encodeURIComponent(symbol)}&tf=${encodeURIComponent(tf)}&limit=${limit}`,
+      undefined,
+      options,
     ),
   quotes: (symbols) =>
     req("GET", `/api/quotes?symbols=${encodeURIComponent(symbols.join(","))}`),

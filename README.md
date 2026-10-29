@@ -48,6 +48,13 @@ multi-chart layout is shown one chart at a time on the phone; choose another fro
 the ⋯ menu. The desktop layout stays saved. The phone's asset-card size and
 collapsed state are separate from the Mac's preferences.
 
+Charts reconnect and fetch missed candles when you return to the page or regain
+a connection. A silent or unavailable crypto stream falls back to polling through
+the Mac. The watchlist checks every 5 seconds; chart polling checks every 3 seconds
+for crypto and 10 seconds for other markets. Provider delays and cached candle
+responses still apply (daily and longer candle responses can be cached for a minute).
+Replay stays in its historical session when you return.
+
 ## Watchlists
 
 Use **+ Section** to create named groups within a watchlist. Drag symbols into a
