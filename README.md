@@ -1,0 +1,121 @@
+# Trade Terminal
+
+Your personal, locally running charting and research app. This is a modified copy
+of Quant Terminal, originally by Lewis Jackson. The original application is MIT
+licensed; its licence and credits remain included.
+
+This copy has no course banner, paid-product sales panels, promotional links,
+or remotely loaded fonts. Help opens a page served by this app. The small
+TradingView chart logo remains as the chart library's software attribution.
+
+## Open and stop
+
+On your Mac, double-click `start.command`, or run this inside the app folder:
+
+```sh
+node scripts/launch.js
+```
+
+The launcher opens your browser and starts the app in the background. When
+Tailscale is connected, it also prints the private address to open on your iPhone.
+Keep the Mac awake and connected to Tailscale. Startup preserves other Tailscale
+services on this computer. To stop the app and its Tailscale sharing route:
+
+```sh
+node scripts/stop.js
+```
+
+Run `node scripts/launch.js --no-tailscale` for access only on this computer.
+Node.js 18 or later is required. There are no npm dependencies to install.
+The folder retains its original name, `quant-terminal`, so saved paths and
+startup shortcuts continue to work.
+
+## Watchlists
+
+Use **+ Section** to create named groups within a watchlist. Drag symbols into a
+section, use a row's move button, or add symbols using the + beside a heading.
+Chevrons fold/unfold sections; the ⋯ menu renames, reorders or removes headings
+while keeping the symbols. Section names, order and folded states save per list.
+
+Click the flag beside any watchlist symbol to choose one of eight colours or clear
+it. The Show menu filters the current list or displays automatic colour groups
+across all lists. A symbol's flag follows it between lists and saves in the existing
+`data/state.json` file. Option/Alt-Enter toggles the current chart symbol's flag.
+On a phone, open the watchlist with the list icon at the top of the left toolbar.
+
+## Selected asset details
+
+The card below the watchlist follows the active chart, with a sourced description,
+quote and news. Cointelegraph, Decrypt and CoinDesk headlines refresh every two
+minutes while the card and page are visible. Coin-specific and general crypto
+headlines are labelled separately. The card can be resized or collapsed.
+
+## Drawing controls
+
+Select a drawing to move it or adjust its white handles. Double-click or double-tap
+it for colours, line thickness, fills, text and precise coordinates. Lock one drawing
+from its small toolbar, or lock all drawings from the left toolbar. Undo and redo
+work with the left buttons and Command/Control-Z shortcuts. All 13 existing tools
+support editing; your older saved drawings work too.
+
+See [Drawing controls](docs/drawing-controls.md) for details.
+
+## Your indicators
+
+Each indicator's header appears inside its own pane. Its up/down buttons move the
+whole pane, including indicators sharing its scale, and save the order per chart. The chevron beside the main
+chart symbol shows or hides indicator headers across that chart's panes, keeping
+the symbol and price information visible. The choice is saved for each chart.
+
+The Custom group includes:
+
+- Order Block Detector & Moving Averages, with a separate timeframe dropdown
+  for SMA 200, EMA 50 and SMA 50.
+- MACD-V Volatility Normalisation, with the original histogram colours and fills.
+- RSI — TradingView Style, with gradients, smoothing options, Bollinger Bands
+  and optional divergence signals.
+- Slow Stochastic, with 14/3 defaults, fixed three-bar K smoothing, and green/red
+  gradients at 80/20.
+
+Their JavaScript files are in `custom/`. Their notes are in `docs/`.
+
+## Saved work and market data
+
+Charts, watchlists, alerts and paper trading are saved under `data/`. Back up
+that folder and `custom/`. Public price feeds, calendars, news and company data
+are fetched from their providers. Optional provider keys are not needed for the
+public feeds. Charts and indicators calculate on this computer. Alerts require
+this computer and the app to stay on.
+
+The Strategy tester, quant checks, replay, screener, heatmap, seasonals,
+financials, drawings and paper trading remain available. The app does not place
+real-money orders by itself. The paid-product connector's promotional interface
+has been removed; its original API adapter remains in the source but the app
+no longer loads or calls its browser interface automatically.
+
+## Check this copy
+
+```sh
+node scripts/check.js
+```
+
+This runs the calculation/server tests, public-feed checks and live smoke tests.
+The [code review](docs/code-review-2026-10-29.md) records the source, licences,
+network behaviour and chart-file verification checked for this copy.
+
+Updates from the original download can overwrite these personal modifications.
+Keep a backup of this folder before updating.
+
+## Licences and credits
+
+- Application core: MIT, copyright 2026 Lewis Jackson. See `LICENSE` and `NOTICE`.
+- Chart library: TradingView Lightweight Charts 5.2.1, Apache License 2.0.
+  Its minified file matches the published package byte for byte.
+- Order Block indicator: includes work by LuxAlgo under CC BY-NC-SA 4.0,
+  which includes noncommercial and share-alike restrictions.
+- Other converted scripts: source supplied by the user; their original authors'
+  rights and any applicable original licences remain unchanged.
+
+The chart library's public source is at
+https://github.com/tradingview/lightweight-charts. Trade Terminal is independent
+of TradingView. Market data providers have their own terms.

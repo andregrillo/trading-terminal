@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trade Terminal — Help</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>body{overflow:auto;max-width:760px;margin:0 auto;padding:32px 20px;line-height:1.6}h1{font-size:26px}h2{font-size:18px;margin-top:28px}a{color:var(--accent)}code{background:var(--panel);padding:2px 5px;border-radius:4px}</style>
+  </head>
+  <body>
+    <h1>Trade Terminal</h1>
+    <p>Your personal charting and research app, running on your Mac.</p>
+    <p><a href="/">Return to your charts</a></p>
+    <h2>Charts and indicators</h2>
+    <p>Start typing a symbol to switch charts. Use Indicators to add indicators and the settings button beside an indicator to change it. Your personal conversions are in the Custom group.</p>
+    <p>Each indicator’s name, values and controls sit at the top of its own pane. Indicators drawn over the price chart keep their headers there. Use the chevron beside the chart symbol to hide or show all indicator headers in that chart. The symbol and price information stay visible, and your choice is saved.</p>
+    <p>Hover over an indicator header and use its up/down arrows to move its pane. Touch screens show the buttons directly. Indicators sharing a pane move together; the pane order saves with that chart.</p>
+    <p>The layout menu supports multiple charts. Replay lets you move through historical candles. The Strategy tester and Paper trading panels use simulated money.</p>
+    <h2>Selected asset details and news</h2>
+    <p>Below the watchlist, the Asset details card follows the active chart. It shows the asset’s description, current quote and price change, followed by linked news headlines. Crypto descriptions come from CoinGecko; US company profiles come from Nasdaq. Descriptions include a source link.</p>
+    <p>Crypto news comes from Cointelegraph, Decrypt and CoinDesk. The app checks for new headlines every two minutes while the card is open and this page is visible. General crypto headlines are labelled when no story matches the selected coin. Articles show their publisher and date and open on the publisher’s site. The refresh button checks the card again; More news opens the full News tab.</p>
+    <p>Drag the divider above Asset details to change its height, or use its chevron to fold it away. These choices save automatically. These are automatically refreshed feeds, rather than instant news push notifications.</p>
+    <h2>Watchlist sections and flags</h2>
+    <p>Use <strong>+ Section</strong> beside the add-symbol box to create named groups inside a watchlist. Move symbols with the row’s move button or drag them onto a heading. The + beside a heading adds a symbol directly to it. Click its chevron to fold or unfold it; the ⋯ menu lets you rename, reorder or remove the heading. Removing a heading keeps all its symbols. Sections and folded states save separately for each watchlist.</p>
+    <p>Click or tap the flag to the left of a watchlist symbol to choose one of eight colours. Right-clicking a row opens the same palette. Choose No flag to clear it. A symbol keeps the same flag across all your lists, and flags save automatically.</p>
+    <p>The Show menu above the watchlist filters your current list or opens automatic colour groups containing flagged symbols from all lists. Removing a row from a colour group clears its flag; removing it from a normal watchlist leaves its flag saved. While viewing a colour group, the add field flags the new symbol in that colour.</p>
+    <p>On your iPhone, the list icon at the top of the left toolbar opens the watchlist panel. On your Mac, Option-Enter toggles a flag for the symbol currently on the chart using your last colour. On Windows, use Alt-Enter.</p>
+    <h2>Drawing on charts</h2>
+    <p>Select the cursor tool, then click or tap a drawing. Drag its body to move it or its white handles to adjust it. Double-click or double-tap it to open settings for colours, line thickness, fills, text and exact coordinates. The gear beside a selected drawing opens the same window.</p>
+    <p>Use the selected drawing’s lock to keep it fixed, or the lock on the left toolbar to lock all drawings. You can pan over locked drawings. Undo and redo buttons are on the left; on Mac you can also use Command-Z and Command-Shift-Z. Changes save automatically after a drag or when you press Apply in settings.</p>
+    <h2>Starting and stopping</h2>
+    <p>On your Mac, double-click <code>start.command</code>. To stop the app, run <code>node scripts/stop.js</code> in the app folder.</p>
+    <p>For your iPhone, connect Tailscale on both devices and use the private address printed when the app starts. Keep your Mac awake and the app running. Alerts also require the app and Mac to stay on.</p>
+    <h2>Your saved work</h2>
+    <p>Your charts, watchlists and alerts are stored in the <code>data</code> folder. Custom indicators are in <code>custom</code>. Back up both folders.</p>
+    <p>The app requests live prices, news and other market information from public data providers. Custom indicator files run code on this computer, so use files from people you trust.</p>
+    <h2>Software credits</h2>
+    <p>Trade Terminal is a locally modified version of Quant Terminal, originally © 2026 Lewis Jackson, under the MIT licence. Its original licence and copyright notice are included with the app.</p>
+    <p>The chart engine is <a href="https://github.com/tradingview/lightweight-charts" rel="noopener" target="_blank">TradingView Lightweight Charts</a>, © TradingView, Inc., under the Apache License 2.0. The small chart logo is its software attribution.</p>
+    <p>The Order Block indicator includes work © LuxAlgo under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank">CC BY-NC-SA 4.0</a>. Its attribution and licence remain in the source file.</p>
+    <p>Trade Terminal is independent of TradingView. Market data belongs to its respective providers.</p>
+  </body>
+</html>
