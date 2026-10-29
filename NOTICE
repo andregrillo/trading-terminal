@@ -22,3 +22,8 @@ and local help. Advertising and external font loading have been removed.
 
 The custom Order Block indicator incorporates work © LuxAlgo under
 CC BY-NC-SA 4.0, as noted in custom/order-blocks-moving-averages.js.
+
+The phone Chart tab uses the Lucide chart-candlestick icon (ISC licence).
+Copyright (c) 2026 Lucide Icons and Contributors. The licence is included in
+public/vendor/lucide.LICENSE. https://lucide.dev/icons/chart-candlestick
+Source: https://github.com/lucide-icons/lucide/blob/main/icons/chart-candlestick.svg

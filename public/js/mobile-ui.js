@@ -8,7 +8,8 @@ const icons = {
   pencil: '<path d="M4 16l11-11 4 4-11 11-5 1zM13 7l4 4M3 22h18"/>',
   indicators: '<path d="M3 17l5-8 5 6 8-12M3 21h18"/>',
   watchlist: '<path d="M8 5h13M8 12h13M8 19h13M3 5h1M3 12h1M3 19h1"/>',
-  chart: '<path d="M5 4v15M2 8h6v6H2M13 2v18M10 6h6v9h-6M21 8v14M18 12h5v5h-5"/>',
+  // Lucide chart-candlestick, ISC licence: https://lucide.dev/icons/chart-candlestick
+  chart: '<path d="M9 5v4"/><rect width="4" height="6" x="7" y="9" rx="1"/><path d="M9 15v2"/><path d="M17 3v2"/><rect width="4" height="8" x="15" y="5" rx="1"/><path d="M17 13v3"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/>',
   more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
   restore: '<path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6M7 7l10 10M17 7L7 17"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
@@ -16,7 +17,7 @@ const icons = {
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
 };
-const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]}</svg>`;
+const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true"${name === 'chart' ? ' class="lucide-chart-candlestick"' : ''}>${icons[name]}</svg>`;
 
 export class MobileUI {
   constructor(app) {

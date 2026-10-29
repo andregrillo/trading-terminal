@@ -42,6 +42,7 @@ body.mobile-ui { height: 100dvh; display: flex; flex-direction: column; box-sizi
 .mobile-tabs { display: flex; height: 52px; }
 .mobile-tabs button { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--muted); font-size: 10px; }
 .mobile-tabs button svg { width: 22px; height: 22px; }
+.mobile-tabs .lucide-chart-candlestick { stroke-width: 2; }
 .mobile-tabs button.active { color: var(--accent); }
 .mobile-ui button { touch-action: manipulation; }
 .mobile-ui input, .mobile-ui select, .mobile-ui textarea { font-size: 16px; }
