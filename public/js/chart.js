@@ -20,6 +20,7 @@ import { DrawingEditor } from "./drawing-editor.js";
 import { ChartLegends } from "./chart-legends.js";
 import { phoneFocusIndex } from "./mobile-pane-focus.js";
 import { indicatorPaneGroups, movePaneOrder } from "../lib/indicator-panes.js";
+import { indicatorScaleLabelVisible, indicatorLevelLabelVisible } from "../lib/indicator-display.js";
 import { VolumeProfile, SessionVolumeProfile } from "./volume-profile.js";
 
 const LW = window.LightweightCharts;
@@ -707,7 +708,7 @@ export class ChartPane {
           ...(Number.isInteger(def.precision) ? { priceFormat: { type: 'price', precision: def.precision, minMove: 10 ** -def.precision } } : {}),
           color,
           priceLineVisible: false,
-          lastValueVisible: logicalPane > 0,
+          lastValueVisible: indicatorScaleLabelVisible(ind, out, logicalPane),
           crosshairMarkerVisible: false,
           title: "",
         };
@@ -720,7 +721,7 @@ export class ChartPane {
       }
       if (parentPane === undefined)
         for (const lv of def.levels || [])
-          list[0].createPriceLine({ price: lv, color: css("--muted"), lineWidth: 1, lineStyle: LW.LineStyle.Dashed, axisLabelVisible: false });
+          list[0].createPriceLine({ price: lv, color: css("--muted"), lineWidth: 1, lineStyle: LW.LineStyle.Dashed, axisLabelVisible: indicatorLevelLabelVisible(ind, lv) });
       if (res.fills?.length) list[0].attachPrimitive(new IndicatorFills(this, res, timeAt));
       if (res.paneAnnotations) list[0].attachPrimitive(new IndicatorAnnotations(this, res.paneAnnotations));
       this.indSeries.set(ind.uid, list);

@@ -85,6 +85,12 @@ whole pane, including indicators sharing its scale, and save the order per chart
 chart symbol shows or hides indicator headers across that chart's panes, keeping
 the symbol and price information visible. The choice is saved for each chart.
 
+Open an indicator's settings and find **Scale labels** to choose which values
+get coloured tags on the right-hand scale. Each plotted value and reference level
+has its own checkbox. These choices save with that indicator and work on both
+Mac and iPhone, including expanded panes. Lines, fills and header values remain
+visible. **Defaults** restores the indicator's original label choices.
+
 The Custom group includes:
 
 - Order Block Detector & Moving Averages, with a separate timeframe dropdown

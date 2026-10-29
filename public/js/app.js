@@ -11,6 +11,7 @@ import {
 import { parseTf, toCsv } from "../lib/series.js";
 import { initPanels } from "./panels.js";
 import { MobileUI } from "./mobile-ui.js";
+import { indicatorScaleLabelVisible, indicatorLevelLabelVisible } from "../lib/indicator-display.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const TF_QUICK = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"];
@@ -585,9 +586,18 @@ class App {
           `<label class="field">${esc(o.label)}<input data-c="${o.key}" type="color" value="${indicatorColor(o, ind.colors).slice(0, 7)}"></label>`,
       )
       .join("");
+    const paneIndex = pane.indPaneOf?.[ind.uid] ?? (def.overlay ? 0 : 1);
+    const scaleLabels = def.outputs.filter((o) => !o.hidden).map((o) =>
+      `<label class="indicator-scale-choice"><input type="checkbox" data-scale-label="${esc(o.key)}" ${indicatorScaleLabelVisible(ind, o, paneIndex) ? 'checked' : ''}><span>${esc(o.label)}</span></label>`
+    ).join('');
+    const parentPane = String(ind.params?.source || '').startsWith('ind:') ? pane.indPaneOf?.[ind.params.source.split(':')[1]] : undefined;
+    const levelLabels = parentPane === undefined && scaleLabels ? (def.levels || []).map((level) =>
+      `<label class="indicator-scale-choice"><input type="checkbox" data-scale-level="${esc(level)}" ${indicatorLevelLabelVisible(ind, level) ? 'checked' : ''}><span>Level ${esc(level)}</span></label>`
+    ).join('') : '';
+    const scaleChoices = scaleLabels ? `<h4>Scale labels</h4><p class="hint-text">Choose the value tags shown on the right-hand scale. Your chart lines and shaded areas stay visible.</p><div class="form-grid indicator-scale-choices">${scaleLabels}${levelLabels}</div>` : '';
     const card = this.modal(
       def.name,
-      `${def.description ? `<p class="hint-text">${esc(def.description)}</p>` : ''}<div class="form-grid">${fields || '<span class="hint-text">No inputs.</span>'}<label class="field">Timeframe<select data-tf ${def.fixedTimeframes ? 'disabled' : ''}>${["", "5m", "15m", "1h", "4h", "1D", "1W", "1M"].map((t) => `<option value="${t}" ${(ind.tf || "") === t ? "selected" : ""}>${t || `Same as chart (${pane.cfg.tf})`}</option>`).join("")}</select></label></div>${def.fixedTimeframes ? '' : '<p class="hint-text">A higher timeframe shows its value once each of its bars has closed, so history never peeks ahead.</p>'}${colors ? `<h4>Colours</h4><div class="form-grid">${colors}</div>` : ""}`,
+      `${def.description ? `<p class="hint-text">${esc(def.description)}</p>` : ''}<div class="form-grid">${fields || '<span class="hint-text">No inputs.</span>'}<label class="field">Timeframe<select data-tf ${def.fixedTimeframes ? 'disabled' : ''}>${["", "5m", "15m", "1h", "4h", "1D", "1W", "1M"].map((t) => `<option value="${t}" ${(ind.tf || "") === t ? "selected" : ""}>${t || `Same as chart (${pane.cfg.tf})`}</option>`).join("")}</select></label></div>${def.fixedTimeframes ? '' : '<p class="hint-text">A higher timeframe shows its value once each of its bars has closed, so history never peeks ahead.</p>'}${scaleChoices}${colors ? `<h4>Colours</h4><div class="form-grid">${colors}</div>` : ""}`,
       {
         foot: '<button class="btn" data-reset>Defaults</button><button class="btn primary" data-ok>Apply</button>',
       },
@@ -610,6 +620,8 @@ class App {
         const automatic = out?.themeColors?.[document.documentElement.dataset.theme];
         if (!automatic || el.value.toLowerCase() !== automatic.toLowerCase()) ind.colors[el.dataset.c] = el.value;
       });
+      ind.scaleLabels = Object.fromEntries([...card.querySelectorAll('[data-scale-label]')].map(el => [el.dataset.scaleLabel, el.checked]));
+      if (levelLabels) ind.levelScaleLabels = Object.fromEntries([...card.querySelectorAll('[data-scale-level]')].map(el => [el.dataset.scaleLevel, el.checked]));
       ind.tf = card.querySelector("[data-tf]").value || undefined;
       this.closeModal();
       pane.render(false);
@@ -624,6 +636,8 @@ class App {
     card.querySelector("[data-reset]").onclick = () => {
       ind.params = {};
       ind.colors = {};
+      delete ind.scaleLabels;
+      delete ind.levelScaleLabels;
       this.closeModal();
       pane.render(false);
       this.persist();
