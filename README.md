@@ -37,6 +37,10 @@ Open the private Tailscale address in Safari. The phone layout has just
 The pencil button opens the drawing tools; choosing a tool closes that drawer.
 Timeframes, indicators and extra chart controls have their own bottom buttons.
 
+In the ⋯ menu, **Invert chart** flips the price scale and every indicator pane,
+including volume. **Restore chart direction** turns them back. This choice saves
+per chart and returns after reopening the app; prices and calculations stay the same.
+
 Double-tap the background of the price pane or an indicator pane to expand it.
 Double-tap again, or tap the restore button at the top right, to bring back all
 panes with their previous sizes. Double-tapping a drawing still opens its settings.

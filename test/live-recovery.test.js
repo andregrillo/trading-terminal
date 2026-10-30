@@ -12,6 +12,23 @@ test('volume draws missing values as gaps and preserves genuine zero-volume cand
   assert.deepEqual(pane.volPoint({ ...bar, volume: null }), { time: bar.time });
   assert.equal(pane.volPoint({ ...bar, volume: 0 }).value, 0);
 });
+
+test('chart inversion changes scale direction, restores focused panes first and saves per chart', () => {
+  const calls = [], cfg = { symbol: 'BINANCE:BTCUSDT', tf: '1D', indicators: [{ uid: 'rsi' }] };
+  const pane = Object.assign(Object.create(ChartPane.prototype), {
+    cfg, chart: { applyOptions: options => calls.push(['price-and-indicators', options.rightPriceScale.invertScale]) },
+    volume: { priceScale: () => ({ applyOptions: options => calls.push(['volume', options.invertScale]) }) },
+    drawings: { update: () => calls.push(['drawings']) },
+    app: { mobileUI: { restorePane: p => { assert.equal(p, pane); calls.push(['restore']); } }, persist: () => calls.push(['save']) },
+  });
+  const original = structuredClone(cfg);
+  pane.toggleInversion();
+  assert.equal(cfg.invertScale, true);
+  assert.deepEqual(calls, [['restore'], ['price-and-indicators', true], ['volume', true], ['drawings'], ['save']]);
+  calls.length = 0; pane.toggleInversion(); assert.equal(cfg.invertScale, false);
+  assert.deepEqual(calls, [['restore'], ['price-and-indicators', false], ['volume', false], ['drawings'], ['save']]);
+  const { invertScale, ...unchanged } = cfg; assert.deepEqual(unchanged, original);
+});
 function setup(t, crypto = true) {
   const originals = Object.fromEntries(['window', 'document', 'WebSocket', 'setTimeout', 'clearTimeout'].map(key => [key, globalThis[key]]));
   const originalCandles = api.candles;

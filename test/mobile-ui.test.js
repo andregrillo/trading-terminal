@@ -93,3 +93,13 @@ test('phone asset-card preferences do not overwrite Mac preferences', () => {
   card.preferredHeight = 380; card.saveSize();
   assert.equal(settings.assetDetailsHeight, 380); assert.equal(writes, 1);
 });
+
+test('the chart menu offers inversion and then offers to restore normal direction', () => {
+  let buttons, toggles = 0;
+  const pane = { cfg: { symbol: 'BINANCE:BTCUSDT', tf: '1D' }, toggleInversion() { this.cfg.invertScale = !this.cfg.invertScale; toggles++; } };
+  const shell = Object.assign(Object.create(MobileUI.prototype), { app: { active: pane, panes: [pane] }, menu: (title, choices) => { buttons = choices; } });
+  shell.more(); buttons.find(button => button.label === 'Invert chart').action();
+  assert.equal(pane.cfg.invertScale, true);
+  shell.more(); buttons.find(button => button.label === 'Restore chart direction').action();
+  assert.equal(pane.cfg.invertScale, false); assert.equal(toggles, 2);
+});

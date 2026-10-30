@@ -128,6 +128,7 @@ export class MobileUI {
       ...(pane.mobilePaneFocus ? [{ label: 'Restore all panes', action: () => this.restorePane() }] : []),
       { label: 'Chart type', action: () => this.chartTypes() }, { label: 'Settings', action: () => { this.restorePane(); this.app.openSettings(); } },
       { label: pane.cfg.log ? 'Linear scale' : 'Log scale', action: () => { this.restorePane(); document.querySelector('#logBtn').click(); } },
+      { label: pane.cfg.invertScale ? 'Restore chart direction' : 'Invert chart', action: () => pane.toggleInversion() },
       { label: 'Light / dark', action: () => document.querySelector('#themeBtn').click() },
       { label: pane.replay ? 'Stop replay' : 'Replay', action: () => { this.restorePane(); document.querySelector('#replayBtn').click(); } },
       { label: 'Fit chart', action: () => pane.chart.timeScale().fitContent() },

@@ -181,7 +181,7 @@ export class ChartPane {
         vertLines: { color: css("--grid") },
         horzLines: { color: css("--grid") },
       },
-      rightPriceScale: { borderColor: css("--border") },
+      rightPriceScale: { borderColor: css("--border"), invertScale: !!this.cfg.invertScale },
       timeScale: { borderColor: css("--border") },
     };
   }
@@ -227,6 +227,20 @@ export class ChartPane {
   applyTheme() {
     this.chart.applyOptions(this.themeOptions());
     this.render(false);
+  }
+
+  applyScaleDirection() {
+    const invertScale = !!this.cfg.invertScale;
+    this.chart.applyOptions({ rightPriceScale: { invertScale } });
+    this.volume?.priceScale().applyOptions({ invertScale });
+    this.drawings.update();
+  }
+
+  toggleInversion() {
+    this.app.mobileUI?.restorePane(this);
+    this.cfg.invertScale = !this.cfg.invertScale;
+    this.applyScaleDirection();
+    this.app.persist();
   }
 
   makeMainSeries() {
@@ -740,6 +754,7 @@ export class ChartPane {
       .filter((m) => !this.replay || m.time <= this.times.at(-1));
     all.sort((x, y) => x.time - y.time);
     this.markers.setMarkers(all);
+    this.applyScaleDirection();
   }
 
   // "14 on RSI 14 (1D)": the numeric inputs, what it's built on, and its timeframe.
