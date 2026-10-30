@@ -232,6 +232,9 @@ export class ChartPane {
   applyScaleDirection() {
     const invertScale = !!this.cfg.invertScale;
     this.chart.applyOptions({ rightPriceScale: { invertScale } });
+    // Oscillators keep their own linear scales when the main price chart uses log.
+    for (const [uid, series] of this.indSeries || [])
+      if ((this.indPaneOf?.[uid] || 0) > 0) series[0]?.priceScale().applyOptions({ mode: LW.PriceScaleMode.Normal });
     this.volume?.priceScale().applyOptions({ invertScale });
     this.drawings.update();
   }

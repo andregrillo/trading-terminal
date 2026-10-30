@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { api } from '../public/js/api.js';
 
-globalThis.window = { LightweightCharts: {} };
+globalThis.window = { LightweightCharts: { PriceScaleMode: { Normal: 0 } } };
 const { ChartPane } = await import('../public/js/chart.js');
 const bar = { time: 1000, open: 10, high: 12, low: 9, close: 11, volume: 3 };
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
@@ -28,6 +28,20 @@ test('chart inversion changes scale direction, restores focused panes first and 
   calls.length = 0; pane.toggleInversion(); assert.equal(cfg.invertScale, false);
   assert.deepEqual(calls, [['restore'], ['price-and-indicators', false], ['volume', false], ['drawings'], ['save']]);
   const { invertScale, ...unchanged } = cfg; assert.deepEqual(unchanged, original);
+});
+
+test('inversion keeps separate indicator scales linear while leaving price log mode unchanged', () => {
+  const calls = [];
+  const pane = Object.assign(Object.create(ChartPane.prototype), {
+    cfg: { invertScale: true, log: true },
+    chart: { applyOptions: options => calls.push(['chart', options]) },
+    indPaneOf: { rsi: 1, ma: 0 },
+    indSeries: new Map(['rsi', 'ma'].map(uid => [uid, [{ priceScale: () => ({ applyOptions: options => calls.push([uid, options]) }) }]])),
+    drawings: { update() {} },
+  });
+  pane.applyScaleDirection();
+  assert.deepEqual(calls, [['chart', { rightPriceScale: { invertScale: true } }], ['rsi', { mode: 0 }]]);
+  assert.equal(pane.cfg.log, true);
 });
 function setup(t, crypto = true) {
   const originals = Object.fromEntries(['window', 'document', 'WebSocket', 'setTimeout', 'clearTimeout'].map(key => [key, globalThis[key]]));
