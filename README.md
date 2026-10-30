@@ -1,12 +1,11 @@
 # Trade Terminal
 
-Your personal, locally running charting and research app. This is a modified copy
-of Quant Terminal, originally by Lewis Jackson. The original application is MIT
-licensed; its licence and credits remain included.
+Your personal, locally running charting and research app, free to use with source
+code included. Charts and indicators calculate on your computer, and public
+providers supply market data and news. No account is needed for the public feeds.
 
-This copy has no course banner, paid-product sales panels, promotional links,
-or remotely loaded fonts. Help opens a page served by this app. The small
-TradingView chart logo remains as the chart library's software attribution.
+The interface has no advertising or promotional panels. Help opens a page served
+by this app. Software licences and required credits are included in the repository.
 
 ## Open and stop
 
@@ -27,8 +26,6 @@ node scripts/stop.js
 
 Run `node scripts/launch.js --no-tailscale` for access only on this computer.
 Node.js 18 or later is required. There are no npm dependencies to install.
-The folder retains its original name, `quant-terminal`, so saved paths and
-startup shortcuts continue to work.
 
 ## On your iPhone
 
@@ -134,12 +131,10 @@ public feeds. Charts and indicators calculate on this computer. Alerts require
 this computer and the app to stay on.
 
 The Strategy tester, quant checks, replay, screener, heatmap, seasonals,
-financials, drawings and paper trading remain available. The app does not place
-real-money orders by itself. The paid-product connector's promotional interface
-has been removed; its original API adapter remains in the source but the app
-no longer loads or calls its browser interface automatically.
+financials, drawings and paper trading are available. The app does not place
+real-money orders by itself.
 
-## Check this copy
+## Check the app
 
 ```sh
 node scripts/check.js
@@ -147,10 +142,9 @@ node scripts/check.js
 
 This runs the calculation/server tests, public-feed checks and live smoke tests.
 The [code review](docs/code-review-2026-10-29.md) records the source, licences,
-network behaviour and chart-file verification checked for this copy.
+network behaviour and chart-file verification.
 
-Updates from the original download can overwrite these personal modifications.
-Keep a backup of this folder before updating.
+Keep a backup of your `data/` and `custom/` folders before updating.
 
 ## Licences and credits
 
