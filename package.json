@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server.js --open",
     "serve": "node server.js",
-    "test": "node --test test/indicators.test.js test/reference.test.js test/providers.test.js test/feeds.test.js test/series.test.js test/backtest.test.js test/server.test.js test/imports.test.js test/ptq.test.js test/quant.test.js test/order-blocks-moving-averages.test.js test/macd-v.test.js test/personal-rsi.test.js test/slow-stochastic.test.js test/drawings.test.js test/watchlist-flags.test.js test/watchlist-sections.test.js test/asset-info.test.js test/news-feeds.test.js test/indicator-panes.test.js test/mobile-ui.test.js test/indicator-display.test.js test/live-recovery.test.js test/spread-volume.test.js test/combined-news.test.js",
+    "test": "node --test test/indicators.test.js test/reference.test.js test/providers.test.js test/feeds.test.js test/series.test.js test/backtest.test.js test/server.test.js test/imports.test.js test/ptq.test.js test/quant.test.js test/order-blocks-moving-averages.test.js test/macd-v.test.js test/personal-rsi.test.js test/slow-stochastic.test.js test/drawings.test.js test/watchlist-flags.test.js test/watchlist-sections.test.js test/asset-info.test.js test/news-feeds.test.js test/indicator-panes.test.js test/mobile-ui.test.js test/indicator-display.test.js test/live-recovery.test.js test/spread-volume.test.js test/combined-news.test.js test/level-actions.test.js",
     "test:live": "node --test test/live.test.js",
     "doctor": "node scripts/doctor.js",
     "compare": "node scripts/compare.js",

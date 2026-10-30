@@ -356,6 +356,14 @@ select.tb option {
 }
 .legend .main-header { gap: 6px; }
 .legend .volume-label { color: var(--muted); font-size: 11px; }
+.level-plus { position: absolute; z-index: 9; width: 24px; height: 24px; padding: 0; border: 1px solid var(--muted); border-radius: 50%; background: var(--bg); color: var(--text); font-size: 20px; line-height: 20px; cursor: pointer; touch-action: manipulation; }
+.level-plus:hover, .level-plus:focus-visible { color: var(--accent); border-color: var(--accent); outline: 2px solid var(--accent-soft); }
+.level-guide { position: absolute; z-index: 6; border-top: 1px dashed var(--muted); pointer-events: none; }
+.level-guide-vertical { position: absolute; z-index: 6; border-left: 1px dashed var(--muted); pointer-events: none; }
+.level-menu { position: fixed; z-index: 70; min-width: 220px; max-width: calc(100vw - 16px); padding: 5px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 7px; box-shadow: var(--shadow); }
+.level-menu-title { color: var(--muted); padding: 6px 9px; font-size: 12px; }
+.level-menu button { display: block; width: 100%; min-height: 40px; padding: 8px 10px; text-align: left; border: 0; border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; }
+.level-menu button:hover, .level-menu button:focus-visible { background: var(--hover); outline: none; }
 .legend .legend-toggle {
   display: inline-flex;
   align-items: center;

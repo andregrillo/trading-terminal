@@ -18,6 +18,7 @@ import {
 import { DrawingLayer, TOOL_BY_ID } from "./drawings.js";
 import { DrawingEditor } from "./drawing-editor.js";
 import { ChartLegends } from "./chart-legends.js";
+import { LevelActions } from "./level-actions.js";
 import { phoneFocusIndex } from "./mobile-pane-focus.js";
 import { indicatorPaneGroups, movePaneOrder } from "../lib/indicator-panes.js";
 import { indicatorScaleLabelVisible, indicatorLevelLabelVisible } from "../lib/indicator-display.js";
@@ -160,6 +161,7 @@ export class ChartPane {
     this.msgEl = el.querySelector(".pane-msg");
     this.createChart();
     this.legends = new ChartLegends(this);
+    this.levelActions = new LevelActions(this);
     el.addEventListener("pointerdown", () => app.setActive(this), true);
     this.bindLiveRecovery();
   }
@@ -758,6 +760,7 @@ export class ChartPane {
     all.sort((x, y) => x.time - y.time);
     this.markers.setMarkers(all);
     this.applyScaleDirection();
+    this.levelActions?.renderLines();
   }
 
   // "14 on RSI 14 (1D)": the numeric inputs, what it's built on, and its timeframe.
@@ -785,6 +788,7 @@ export class ChartPane {
 
   // ---------- legend ----------
   onCrosshair(p) {
+    this.levelActions?.update(p);
     if (this.app.tool !== "cursor" && this.drawings.temp && p.point) {
       const pt = this.pointAt(p);
       if (pt) {
@@ -914,6 +918,7 @@ export class ChartPane {
   removeIndicator(uid) {
     this.app.mobileUI?.restorePane(this);
     this.cfg.indicators = this.cfg.indicators.filter((x) => x.uid !== uid);
+    if (this.cfg.indicatorLines) this.cfg.indicatorLines = this.cfg.indicatorLines.filter(line => line.root !== uid);
     this.render(false);
     this.app.persist();
   }
@@ -1015,6 +1020,7 @@ export class ChartPane {
     this.drawings.temp = null;
     this.drawings.update();
     this.app.saveDrawings(this.cfg.symbol, []);
+    if (this.cfg.indicatorLines?.length) { this.cfg.indicatorLines = []; this.levelActions?.redraw(); }
   }
 
   setInteractive(on) {
@@ -1327,6 +1333,7 @@ export class ChartPane {
   }
 
   destroy() {
+    this.levelActions?.destroy();
     this.liveEvents?.abort();
     this.stopLive();
     clearInterval(this.replayTimer);

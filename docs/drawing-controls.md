@@ -12,6 +12,24 @@ All 13 drawing tools support selection, moving, editing and locking. Existing sa
 
 Drawings and all their settings save in the existing `data` folder and synchronize across charts showing the same symbol. Mouse and touch controls use the same saved points. Public market data and the underlying chart remain the existing app's implementation.
 
+## Quick actions at a level
+
+Move the crosshair over a chart or indicator pane, then use the **+** beside its
+right-hand scale. The menu stays at that level and keeps both dashed guides visible.
+Choose **Draw horizontal line** or **Add alert at this level**. Alert creation opens
+the existing alert window with the selected value filled in for review.
+
+Price lines use the normal drawing tools. Indicator horizontal lines save with the
+chart and follow their indicator pane when it moves. Use **Edit horizontal lines…**
+in that pane's + menu to change a level, colour, thickness or style, or delete it.
+Clearing all drawings also clears these indicator lines.
+
+Indicator alerts copy the indicator's current parameters and use its timeframe.
+The output can be changed in the alert window. Indicators calculated from another
+indicator's output do not support quick alerts yet; the app explains this instead
+of creating a condition based on a different source. Inverted scales and expanded
+phone panes use the same underlying level values.
+
 ## References and scope
 
 The interaction design follows TradingView's public documentation, including [rectangle style, text and coordinate settings](https://www.tradingview.com/support/solutions/43000516984-rectangle-drawing-tool/) and [drawing shortcuts](https://www.tradingview.com/charting-library-docs/latest/configuration/Shortcuts/). This is a local implementation for Trade Terminal's existing tools. It does not add TradingView's full drawing catalogue or proprietary charting code.

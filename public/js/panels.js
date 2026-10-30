@@ -93,7 +93,7 @@ function operandHtml(o) {
       extra += `<select data-out>${outs.map((k) => `<option ${k === o.output ? "selected" : ""}>${k}</option>`).join("")}</select>`;
   }
   const lineData = o.kind === "line" ? ` data-line="${esc(JSON.stringify(o.line))}" data-label="${esc(o.label || "Drawn line")}"` : "";
-  return `<span class="operand"${lineData}><select data-kind>${opts}</select>${extra}</span>`;
+  return `<span class="operand"${lineData}${o.kind === 'ind' ? ` data-params="${esc(JSON.stringify(o.params || {}))}"` : ''}><select data-kind>${opts}</select>${extra}</span>`;
 }
 
 function readOperand(span) {
@@ -107,7 +107,7 @@ function readOperand(span) {
   if (k.startsWith("p:")) return { kind: "price", field: k.slice(2) };
   const id = k.slice(2),
     def = BY_ID[id];
-  const params = {};
+  const params = JSON.parse(span.dataset.params || '{}');
   const p = span.querySelector("[data-p]");
   if (p) params[p.dataset.p] = Number(p.value);
   return {
@@ -496,7 +496,7 @@ export function initPanels(app) {
     }];
     const card = app.modal(
       "Create alert",
-      `<div class="form-grid"><label class="field">Symbol<input id="aSym" value="${esc(preset.symbol || p?.cfg.symbol || "")}"></label><label class="field">Check<select id="aScope"><option value="">Just this symbol</option>${Object.keys(app.state.watchlists || {}).map((n) => `<option value="${esc(n)}">Every symbol on ${esc(n)}</option>`).join("")}</select></label><label class="field">Timeframe<input id="aTf" value="${esc(p?.cfg.tf || "1h")}"></label></div>
+      `<div class="form-grid"><label class="field">Symbol<input id="aSym" value="${esc(preset.symbol || p?.cfg.symbol || "")}"></label><label class="field">Check<select id="aScope"><option value="">Just this symbol</option>${Object.keys(app.state.watchlists || {}).map((n) => `<option value="${esc(n)}">Every symbol on ${esc(n)}</option>`).join("")}</select></label><label class="field">Timeframe<input id="aTf" value="${esc(preset.tf || p?.cfg.tf || "1h")}"></label></div>
       <h4>Conditions</h4><div class="rules" id="aRule">${rules.map(ruleHtml).join("")}</div>
       <div class="row-flex"><button class="btn small" id="aAdd">+ Condition</button><label class="field" style="flex-direction:row;align-items:center;gap:6px">Fire when<select id="aMatch"><option value="all">all are true</option><option value="any">any is true</option></select></label><span class="hint-text">Up to 5.</span></div>
       <div class="form-grid"><label class="field">Trigger<select id="aTrig"><option value="once">Only once</option><option value="oncePerBar">Once per bar</option><option value="oncePerBarClose">Once per bar close</option></select></label><label class="field">Message (optional)<input id="aMsg" placeholder="BTC broke out"></label></div>
