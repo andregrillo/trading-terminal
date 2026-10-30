@@ -55,6 +55,12 @@ for crypto and 10 seconds for other markets. Provider delays and cached candle
 responses still apply (daily and longer candle responses can be cached for a minute).
 Replay stays in its historical session when you return.
 
+For calculated charts combining Binance USDT pairs, volume adds each asset's
+exchange-reported traded value in USDT for matching candles. The chart labels it
+**Combined volume · USDT**. This volume also feeds volume-based indicators on
+that calculated chart. Ordinary single-asset volume keeps its original units.
+If a fallback source lacks exact USDT turnover, the chart shows it as unavailable.
+
 ## Watchlists
 
 Use **+ Section** to create named groups within a watchlist. Drag symbols into a

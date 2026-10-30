@@ -355,6 +355,7 @@ select.tb option {
   flex-shrink: 0;
 }
 .legend .main-header { gap: 6px; }
+.legend .volume-label { color: var(--muted); font-size: 11px; }
 .legend .legend-toggle {
   display: inline-flex;
   align-items: center;

@@ -29,6 +29,20 @@ The API reads data and runs research. Placing real orders isn't part of it; that
 
 `provider` and `notes` say where the bars came from (and whether they're delayed), the same text the chart shows.
 
+Binance candles also retain `quoteVolume`, the exchange-reported turnover in the
+pair's quote currency. For calculated charts whose distinct asset symbols are
+all Binance USDT pairs, candle `volume` is the sum of their reported USDT turnover
+at matching timestamps. The price operator does not change this sum; repeated
+symbols count once and numerical constants add no volume. Volume-based indicators
+on that calculated chart use this combined turnover.
+
+These responses include `volumeInfo` with `currency: "USDT"`,
+`method: "sum-quote-volume"`, `sources`, `available`, and `missingBars`.
+If any contributing source lacks exact USDT turnover, the affected volume is
+`null` and drawn as a gap; the app does not estimate it as close × coin volume or
+mix another currency into USDT. Other calculated charts retain their previous
+volume behaviour. Single-asset `volume` retains the provider's original units.
+
 ## Backtests
 
 `POST /api/backtest` runs the strategy tester on the server. The strategy is the same JSON the tester's "Edit as JSON" shows (the README's Strategy format section):

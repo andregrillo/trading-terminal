@@ -6,6 +6,12 @@ globalThis.window = { LightweightCharts: {} };
 const { ChartPane } = await import('../public/js/chart.js');
 const bar = { time: 1000, open: 10, high: 12, low: 9, close: 11, volume: 3 };
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+
+test('volume draws missing values as gaps and preserves genuine zero-volume candles', () => {
+  const pane = Object.create(ChartPane.prototype); pane.toChart = time => time;
+  assert.deepEqual(pane.volPoint({ ...bar, volume: null }), { time: bar.time });
+  assert.equal(pane.volPoint({ ...bar, volume: 0 }).value, 0);
+});
 function setup(t, crypto = true) {
   const originals = Object.fromEntries(['window', 'document', 'WebSocket', 'setTimeout', 'clearTimeout'].map(key => [key, globalThis[key]]));
   const originalCandles = api.candles;

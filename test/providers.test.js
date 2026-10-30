@@ -56,6 +56,15 @@ test("with Binance blocked, crypto still resolves as crypto and loads from Coinb
   assert.equal(r.candles.length, 100);
 });
 
+test("USDT spread volume stays unavailable when fallback prices come from a USD-only source", async () => {
+  mode = { "api.binance.com": 451, "data-api.binance.vision": 451, "api.binance.us": 451 };
+  const r = await P.getCandles("SPREAD:BINANCE:DOTUSDT / BINANCE:ATOMUSDT", "1D", 27);
+  assert.equal(r.provider, "Coinbase + Coinbase");
+  assert.equal(r.volumeInfo.currency, "USDT");
+  assert.equal(r.volumeInfo.available, false);
+  assert.ok(r.candles.every(bar => bar.volume === null));
+});
+
 test("a silently dropped host costs one timeout, then is skipped", async () => {
   mode = {
     "api.binance.com": "drop",

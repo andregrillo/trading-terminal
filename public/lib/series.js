@@ -49,6 +49,7 @@ export function resample(bars, tf) {
         low: b.low,
         close: b.close,
         volume: b.volume || 0,
+        ...(Number.isFinite(b.quoteVolume) && b.quoteVolume >= 0 ? { quoteVolume: b.quoteVolume } : {}),
       };
       out.push(cur);
     } else {
@@ -56,6 +57,10 @@ export function resample(bars, tf) {
       cur.low = Math.min(cur.low, b.low);
       cur.close = b.close;
       cur.volume += b.volume || 0;
+      if (cur.quoteVolume !== undefined) {
+        if (Number.isFinite(b.quoteVolume) && b.quoteVolume >= 0) cur.quoteVolume += b.quoteVolume;
+        else delete cur.quoteVolume;
+      }
     }
   }
   return out;

@@ -1,5 +1,5 @@
 // One chart: candles + volume + any number of indicators, drawings, compare symbols, replay and live data.
-import { api, fmtPrice, fmtPct, esc, ticker, exchange } from "./api.js";
+import { api, fmtPrice, fmtPct, fmtNum, esc, ticker, exchange } from "./api.js";
 import { BY_ID, compute, periodKey } from "../lib/indicators.js";
 import { requiredTimeframes } from "../lib/indicator-data.js";
 import { IndicatorGraphics } from "./indicator-graphics.js";
@@ -384,6 +384,7 @@ export class ChartPane {
       if (token !== this.loadToken) return;
       this.cfg.symbol = r.symbol;
       this.provider = r.provider;
+      this.volumeInfo = r.volumeInfo || null;
       this.notes = r.notes || [];
       this.bars = r.candles;
       this.mtf = {};
@@ -473,6 +474,7 @@ export class ChartPane {
   }
 
   volPoint(b) {
+    if (!Number.isFinite(b.volume)) return { time: this.toChart(b.time) };
     return {
       time: this.toChart(b.time),
       value: b.volume || 0,
@@ -797,6 +799,11 @@ export class ChartPane {
     if (b)
       html += `<span class="ohlc ${cls}"><span><b>O</b>${fmtPrice(b.open)}</span><span><b>H</b>${fmtPrice(b.high)}</span><span><b>L</b>${fmtPrice(b.low)}</span><span><b>C</b>${fmtPrice(b.close)}</span><span>${fmtPct(chg)}</span></span>`;
     html += "</div>";
+    if (this.volume && this.app.settings.volume !== false && this.volumeInfo?.currency) {
+      const label = this.volumeInfo.sources.length > 1 ? 'Combined volume' : 'Volume';
+      const value = this.volumeInfo.available ? fmtNum(b?.volume) : 'Unavailable';
+      html += `<div class="row volume-label" title="${esc(this.volumeInfo.sources.join(' + '))}"><span>${label} · ${esc(this.volumeInfo.currency)}</span><span>${value}</span></div>`;
+    }
     const headers = new Map([[0, '']]);
     const append = (pane, row) => headers.set(pane, (headers.get(pane) || '') + row);
     for (const sym of this.cfg.compare) {
@@ -1114,7 +1121,10 @@ export class ChartPane {
     const timeout = setTimeout(() => request.abort(), 15000);
     try {
       const r = await api.candles(symbol, tf, catchUp ? this.app.settings.bars || 3000 : 5, { signal: request.signal });
-      if (token === this.liveToken && !this.replay && symbol === this.cfg.symbol && tf === this.cfg.tf) this.merge(r.candles);
+      if (token === this.liveToken && !this.replay && symbol === this.cfg.symbol && tf === this.cfg.tf) {
+        this.volumeInfo = r.volumeInfo || null;
+        this.merge(r.candles);
+      }
     } catch {
       // A lost network connection must not leave the polling loop waiting forever.
     } finally {
