@@ -43,6 +43,13 @@ If any contributing source lacks exact USDT turnover, the affected volume is
 mix another currency into USDT. Other calculated charts retain their previous
 volume behaviour. Single-asset `volume` retains the provider's original units.
 
+For combined symbols, `GET /api/news` resolves the component symbols and runs
+each asset's normal lookup. The response has `scope: "combined"`, per-asset
+`components`, and deduplicated, interleaved `items` with `assetLabels` and
+`symbols`. Shared stories identify both assets. General market fallback stories
+are excluded from combined results, so unrelated stories are not presented as
+asset-specific news. Constants and repeated symbols do not add extra lookups.
+
 ## Backtests
 
 `POST /api/backtest` runs the strategy tester on the server. The strategy is the same JSON the tester's "Edit as JSON" shows (the README's Strategy format section):

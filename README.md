@@ -85,6 +85,11 @@ quote and news. Cointelegraph, Decrypt and CoinDesk headlines refresh every two
 minutes while the card and page are visible. Coin-specific and general crypto
 headlines are labelled separately. The card can be resized or collapsed.
 
+For a calculated chart such as ADAUSDT/BTCUSDT, news is looked up for each
+underlying asset separately. Cards name the relevant asset; a shared story appears
+once with both names. The preview makes room for news from both assets. If one
+has no matching headlines or its news source is unavailable, the card says so.
+
 ## Drawing controls
 
 Select a drawing to move it or adjust its white handles. Double-click or double-tap

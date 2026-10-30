@@ -1184,6 +1184,7 @@ table.t.heat td { text-align: center; } table.t.heat td.base { outline: 2px soli
 .asset-news-note { font-size: 10px; color: var(--muted); line-height: 1.4; margin: 5px 0 8px; }
 .asset-headline { display: flex; flex-direction: column; gap: 4px; padding: 9px 7px; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
 .asset-headline.featured { background: rgba(126,87,194,.1); border: 1px solid rgba(126,87,194,.2); border-radius: 6px; margin-bottom: 3px; }
+.asset-headline-assets { display: block; color: var(--accent); font-size: 10px; font-weight: 600; margin-bottom: 3px; }
 .asset-headline:hover .asset-headline-title { color: var(--accent); }
 .asset-headline-title { font-size: 11px; line-height: 1.4; font-weight: 500; }
 .asset-headline-meta { color: var(--muted); font-size: 10px; }

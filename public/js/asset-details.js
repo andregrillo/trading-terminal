@@ -133,12 +133,13 @@ export class AssetDetails {
     if (logo) { const img = document.createElement('img'); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.onload = () => { if (img.isConnected) badge.classList.add('has-logo'); }; img.onerror = () => img.remove(); badge.appendChild(img); img.src = logo; }
   }
   drawNews(data) {
-    this.node('news-heading').textContent = data.scope === 'market' ? 'Crypto market news' : 'Latest news';
+    const assets = [...new Set((data.components || []).map(asset => asset.label))];
+    this.node('news-heading').textContent = data.scope === 'combined' ? `News for ${assets.join(' + ')}` : data.scope === 'market' ? 'Crypto market news' : 'Latest news';
     const available = (data.sources || []).filter(source => source.available).map(source => source.name);
     this.node('news-note').textContent = [data.note, available.length ? available.join(' · ') : ''].filter(Boolean).join(' · ');
     this.node('news-time').textContent = data.updatedAt ? `Checked ${new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · 2 min` : 'Every 2 min';
     const items = (data.items || []).filter(item => webUrl(item.url)).slice(0, 4);
-    this.node('news-list').innerHTML = items.map((item, index) => `<a class="asset-headline ${index === 0 ? 'featured' : ''}" href="${esc(webUrl(item.url))}" target="_blank" rel="noopener noreferrer"><span class="asset-headline-title">${esc(item.title)}</span><span class="asset-headline-meta">${esc(item.source || '')}${item.time ? ` · ${esc(ago(item.time))}` : item.ago ? ` · ${esc(item.ago)}` : ''}</span>${index === 0 && item.summary ? `<span class="asset-headline-summary">${esc(item.summary.slice(0, 180))}${item.summary.length > 180 ? '…' : ''}</span>` : ''}</a>`).join('');
+    this.node('news-list').innerHTML = items.map((item, index) => `<a class="asset-headline ${index === 0 ? 'featured' : ''}" href="${esc(webUrl(item.url))}" target="_blank" rel="noopener noreferrer">${item.assetLabels?.length ? `<span class="asset-headline-assets">${item.assetLabels.map(esc).join(' · ')}</span>` : ''}<span class="asset-headline-title">${esc(item.title)}</span><span class="asset-headline-meta">${esc(item.source || '')}${item.time ? ` · ${esc(ago(item.time))}` : item.ago ? ` · ${esc(item.ago)}` : ''}</span>${index === 0 && item.summary ? `<span class="asset-headline-summary">${esc(item.summary.slice(0, 180))}${item.summary.length > 180 ? '…' : ''}</span>` : ''}</a>`).join('');
     this.node('more-news').classList.toggle('hidden', !items.length);
   }
   destroy() {
