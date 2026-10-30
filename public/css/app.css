@@ -1,22 +1,22 @@
 :root,
 [data-theme="dark"] {
-  --bg: #131722;
-  --panel: #1e222d;
-  --panel-2: #2a2e39;
-  --border: #2a2e39;
+  --bg: #000000;
+  --panel: #080808;
+  --panel-2: #171717;
+  --border: #242424;
   --text: #d1d4dc;
   --muted: #787b86;
   --accent: #2962ff;
   --accent-soft: rgba(41, 98, 255, 0.18);
   --up: #089981;
   --down: #f23645;
-  --hover: #2a2e39;
-  --grid: rgba(42, 46, 57, 0.6);
-  --input: #131722;
+  --hover: #171717;
+  --grid: rgba(36, 36, 36, 0.6);
+  --input: #000000;
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
   --gold: #d4a514;
   --gold-soft: rgba(212, 165, 20, 0.16);
-  --scroll: #363a45;
+  --scroll: #363636;
   color-scheme: dark;
 }
 [data-theme="light"] {
