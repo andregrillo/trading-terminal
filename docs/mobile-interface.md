@@ -2,7 +2,7 @@
 
 The phone shell activates only when the screen is at most 1024 CSS pixels wide,
 has no hover input, and has a coarse primary pointer. Width alone does not enable
-it. `public/css/app.css` is unchanged; phone styles live in `mobile.css`. Phone
+it. Phone styles live in `mobile.css`; shared pane-expansion controls live in `app.css`. Phone
 controls are created only while this mode is active and removed when it ends.
 
 Watchlist and Chart are the two navigation tabs. Chart tools provide symbol search,
@@ -20,6 +20,10 @@ separate from saved desktop preferences.
 Two short taps on a pane's plot background expand/restore it. Drawings retain their
 own editing gestures. Axis taps, pane dividers, dragging, long presses, drawing mode
 and pinching do not trigger expansion. A restore button offers a second way back.
+The same pane-expansion controller also handles desktop background double-clicks.
+Escape or the restore button returns to the previous pane arrangement. Expansion
+affects only that chart, preserving other charts in a desktop grid. Drawing
+double-clicks and axis double-clicks keep their existing behaviour.
 
 ## Validation on 2026-10-29
 
@@ -37,3 +41,15 @@ and pinching do not trigger expansion. A restore button offers a second way back
 These browser checks use Chrome emulation. Physical iPhone Safari and its browser
 bars should also be checked on the user's device. The layout uses dynamic viewport
 height and safe-area insets for Safari's available screen area.
+
+## Desktop pane expansion validation, 2026-10-30
+
+- All 371 tests passed, including mouse/touch gesture handling and scale restoration.
+- Actual desktop mouse events expanded/restored the price pane and all three
+  indicator panes, preserving manual scales, chart position and resized pane heights.
+- Drawing double-clicks still opened settings; axis double-clicks kept their native behaviour.
+- Restore button, Escape, inverted/log scales, indicator changes, and expansion
+  in an inactive chart within a two-chart grid were checked in Chrome.
+- Phone touch emulation expanded/restored all four panes, then desktop expansion
+  worked again after leaving phone mode. No browser exceptions occurred.
+- Browser checks used a temporary data folder, leaving saved user charts untouched.

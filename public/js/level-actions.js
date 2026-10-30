@@ -1,12 +1,12 @@
 import { esc } from './api.js';
 import { BY_ID } from '../lib/indicators.js';
 
-// Crosshair coordinates are local to their native pane, including expanded phone panes.
+// Crosshair coordinates are local to their native pane, including expanded panes.
 export function levelTarget(pane, point) {
   if (!point.point || point.logical == null || pane.app.tool !== 'cursor') return null;
   const index = point.paneIndex ?? 0, row = pane.chart.panes()[index];
   if (!row || point.point.x < 0 || point.point.x > pane.chart.timeScale().width() || point.point.y < 0 || point.point.y >= row.getHeight()) return null;
-  const focus = pane.app.mobileUI?.enabled && pane.mobilePaneFocus;
+  const focus = pane.paneFocus;
   const root = focus && focus !== 'price' ? focus : index ? pane.indicatorPaneGroups.find(group => group.index === index)?.root : null;
   const group = root && pane.indicatorPaneGroups.find(group => group.root === root);
   const series = root ? group?.indicators.map(uid => pane.indSeries.get(uid)?.[0]).find(Boolean) : pane.main;

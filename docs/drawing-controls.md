@@ -28,7 +28,7 @@ Indicator alerts copy the indicator's current parameters and use its timeframe.
 The output can be changed in the alert window. Indicators calculated from another
 indicator's output do not support quick alerts yet; the app explains this instead
 of creating a condition based on a different source. Inverted scales and expanded
-phone panes use the same underlying level values.
+panes on desktop and phone use the same underlying level values.
 
 ## References and scope
 

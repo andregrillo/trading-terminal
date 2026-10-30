@@ -89,6 +89,12 @@ has no matching headlines or its news source is unavailable, the card says so.
 
 ## Drawing controls
 
+On desktop, double-click the background of the price pane or any indicator pane
+to expand it within that chart. Double-click again, click **Restore all panes**,
+or press Escape to return to the previous pane sizes and chart position. Other
+charts in a multi-chart layout stay in place. Double-clicking a drawing still
+opens its settings.
+
 Select a drawing to move it or adjust its white handles. Double-click or double-tap
 it for colours, line thickness, fills, text and precise coordinates. Lock one drawing
 from its small toolbar, or lock all drawings from the left toolbar. Undo and redo

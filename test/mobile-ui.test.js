@@ -1,13 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MobileUI, PHONE_QUERY } from '../public/js/mobile-ui.js';
-import { MobilePaneFocus, phoneFocusIndex } from '../public/js/mobile-pane-focus.js';
+import { PaneFocus, paneFocusIndex } from '../public/js/pane-focus.js';
 import { AssetDetails } from '../public/js/asset-details.js';
 
-test('desktop startup does not create phone controls or access the document', (t) => {
+test('desktop startup binds pane expansion without creating phone controls', (t) => {
   let query, listener;
   const original = globalThis.matchMedia;
-  t.after(() => { if (original) globalThis.matchMedia = original; else delete globalThis.matchMedia; });
+  const oldWindow = globalThis.window, oldDocument = globalThis.document;
+  globalThis.window = new EventTarget(); globalThis.document = new EventTarget();
+  t.after(() => {
+    if (original) globalThis.matchMedia = original; else delete globalThis.matchMedia;
+    if (oldWindow) globalThis.window = oldWindow; else delete globalThis.window;
+    if (oldDocument) globalThis.document = oldDocument; else delete globalThis.document;
+  });
   globalThis.matchMedia = value => {
     query = value;
     return { matches: false, addEventListener: (name, callback) => { assert.equal(name, 'change'); listener = callback; } };
@@ -20,19 +26,20 @@ test('desktop startup does not create phone controls or access the document', (t
   assert.equal(typeof listener, 'function');
   assert.equal(ui.enabled, false);
   assert.equal(ui.el, undefined);
+  ui.focusAbort.abort();
 });
 
-test('focus is phone-only and follows a pane identity after reordering', () => {
-  const pane = { app: { mobileUI: { enabled: false } }, mobilePaneFocus: 'rsi', indicatorPaneGroups: [{ root: 'rsi', index: 2 }] };
-  assert.equal(phoneFocusIndex(pane), null);
+test('focus works on desktop and phone and follows a pane identity after reordering', () => {
+  const pane = { app: { mobileUI: { enabled: false } }, paneFocus: 'rsi', indicatorPaneGroups: [{ root: 'rsi', index: 2 }] };
+  assert.equal(paneFocusIndex(pane), 2);
   pane.app.mobileUI.enabled = true;
-  assert.equal(phoneFocusIndex(pane), 2);
-  assert.equal(phoneFocusIndex(pane, [{ root: 'rsi', index: 1 }]), 1);
-  pane.mobilePaneFocus = 'price'; assert.equal(phoneFocusIndex(pane), 0);
-  pane.mobilePaneFocus = 'removed'; assert.equal(phoneFocusIndex(pane), null);
+  assert.equal(paneFocusIndex(pane), 2);
+  assert.equal(paneFocusIndex(pane, [{ root: 'rsi', index: 1 }]), 1);
+  pane.paneFocus = 'price'; assert.equal(paneFocusIndex(pane), 0);
+  pane.paneFocus = 'removed'; assert.equal(paneFocusIndex(pane), null);
 });
 
-test('restoring a focused pane preserves zoom, manual price scale, saved configuration and pane heights', () => {
+for (const enabled of [false, true]) test(`restoring a focused pane preserves zoom, manual price scale, saved configuration and pane heights (${enabled ? 'phone' : 'desktop'})`, () => {
   const cfg = { symbol: 'BTCUSDT', tf: '4h', indicators: [{ uid: 'rsi', params: { length: 14 } }] };
   const before = structuredClone(cfg), range = { from: 4, to: 104 }, priceRange = { from: 60000, to: 90000 };
   let restoredOptions, restoredPriceRange, rangeSet;
@@ -43,17 +50,17 @@ test('restoring a focused pane preserves zoom, manual price scale, saved configu
     main: { options: () => ({ visible: true }), priceScale: () => scale }, volume: { options: () => ({ visible: true }) },
     chart: { panes: () => [1, .4].map(value => ({ getStretchFactor: () => value })), timeScale: () => ({ getVisibleLogicalRange: () => range, setVisibleLogicalRange: value => { rangeSet = value; } }) },
     drawingEditor: { cancel() {}, select() {} },
-    render(reset) { assert.equal(reset, false); assert.equal(this.mobilePaneSnapshot.mainStretch, 1); assert.equal(this.mobilePaneSnapshot.stretch.get('rsi'), .4); },
+    render(reset) { assert.equal(reset, false); assert.equal(this.paneFocusSnapshot.mainStretch, 1); assert.equal(this.paneFocusSnapshot.stretch.get('rsi'), .4); },
   };
-  const shell = { enabled: true, sync() {}, app: { panes: [pane], active: pane } };
-  const focus = new MobilePaneFocus(shell);
+  const shell = { enabled, sync() {}, app: { panes: [pane], active: pane } };
+  const focus = new PaneFocus(shell);
   focus.toggle(pane, 'rsi');
-  assert.equal(pane.mobilePaneFocus, 'rsi');
+  assert.equal(pane.paneFocus, 'rsi');
   assert.deepEqual(cfg, before);
   originalOptions.scaleMargins.top = .5;
   focus.restore();
-  assert.equal(pane.mobilePaneFocus, null);
-  assert.equal(pane.mobilePaneSnapshot, undefined);
+  assert.equal(pane.paneFocus, null);
+  assert.equal(pane.paneFocusSnapshot, undefined);
   assert.equal(restoredOptions.scaleMargins.top, .1);
   assert.deepEqual(restoredPriceRange, priceRange);
   assert.deepEqual(rangeSet, range);
@@ -69,7 +76,7 @@ test('pane background hit testing excludes axes, pane dividers, drawings and dra
     drawings: { hitTestDetailed: (x, y, options) => { tolerance = options.tolerance; return drawing; } },
   };
   const shell = { enabled: true, view: 'chart', app: { active: pane, tool: 'cursor' } };
-  const focus = new MobilePaneFocus(shell), event = { target: canvas, clientX: 100, clientY: 100, pointerType: 'touch' };
+  const focus = new PaneFocus(shell), event = { target: canvas, clientX: 100, clientY: 100, pointerType: 'touch' };
   assert.equal(focus.point(event).key, 'price'); assert.equal(tolerance, 13);
   assert.equal(focus.point({ ...event, clientX: 320 }), null);
   assert.equal(focus.point({ ...event, clientY: 2 }), null);
@@ -77,6 +84,39 @@ test('pane background hit testing excludes axes, pane dividers, drawings and dra
   drawing = true; assert.equal(focus.point(event), null);
   drawing = false; shell.app.tool = 'trend'; assert.equal(focus.point(event), null);
   shell.app.tool = 'cursor'; shell.view = 'watchlist'; assert.equal(focus.point(event), null);
+  shell.enabled = false;
+  assert.equal(focus.point({ ...event, pointerType: 'mouse' }).key, 'price'); assert.equal(tolerance, 7);
+  // A window capture handler runs before the chart's own active-chart handler.
+  shell.app.panes = [pane]; shell.app.active = { chartEl: { contains: () => false } };
+  assert.equal(focus.point(event).pane, pane);
+});
+
+test('mouse double-click and touch double-tap expand once and switching input does not swallow a click', t => {
+  const previous = { window: globalThis.window, document: globalThis.document, requestAnimationFrame: globalThis.requestAnimationFrame };
+  globalThis.window = new EventTarget(); globalThis.document = new EventTarget(); globalThis.requestAnimationFrame = callback => callback();
+  const abort = new AbortController();
+  t.after(() => {
+    abort.abort();
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete globalThis[key]; else globalThis[key] = value; }
+  });
+  const pane = {}, focus = new PaneFocus({ app: { active: pane } }); let toggles = 0;
+  focus.point = () => ({ pane, key: 'price', x: 100, y: 100 }); focus.toggle = () => toggles++;
+  focus.bind(abort.signal);
+  const fire = (target, name, data = {}) => {
+    const event = new Event(name, { cancelable: true });
+    for (const [key, value] of Object.entries({ pointerId: 1, button: 0, clientX: 100, clientY: 100, ...data })) Object.defineProperty(event, key, { value });
+    target.dispatchEvent(event);
+  };
+  const tap = pointerType => { fire(window, 'pointerdown', { pointerType }); fire(window, 'pointerup', { pointerType }); };
+  tap('mouse'); tap('mouse'); assert.equal(toggles, 0);
+  fire(document, 'dblclick'); assert.equal(toggles, 1);
+  tap('touch'); tap('touch'); assert.equal(toggles, 2);
+  fire(document, 'dblclick', { sourceCapabilities: { firesTouchEvents: true } }); assert.equal(toggles, 2);
+  tap('mouse'); tap('mouse'); fire(document, 'dblclick'); assert.equal(toggles, 3);
+  fire(window, 'pointerdown', { pointerType: 'touch' }); fire(window, 'pointermove', { clientX: 130 }); fire(window, 'pointerup');
+  tap('touch'); assert.equal(toggles, 3, 'dragging must not count as the first tap');
+  fire(window, 'pointerdown', { pointerType: 'touch', pointerId: 2, isPrimary: false }); fire(window, 'pointerup', { pointerId: 2 });
+  tap('touch'); assert.equal(toggles, 3, 'pinching must cancel any pending tap');
 });
 
 test('phone asset-card preferences do not overwrite Mac preferences', () => {

@@ -19,7 +19,7 @@ import { DrawingLayer, TOOL_BY_ID } from "./drawings.js";
 import { DrawingEditor } from "./drawing-editor.js";
 import { ChartLegends } from "./chart-legends.js";
 import { LevelActions } from "./level-actions.js";
-import { phoneFocusIndex } from "./mobile-pane-focus.js";
+import { paneFocusIndex } from "./pane-focus.js";
 import { indicatorPaneGroups, movePaneOrder } from "../lib/indicator-panes.js";
 import { indicatorScaleLabelVisible, indicatorLevelLabelVisible } from "../lib/indicator-display.js";
 import { VolumeProfile, SessionVolumeProfile } from "./volume-profile.js";
@@ -646,8 +646,8 @@ export class ChartPane {
   }
 
   renderIndicators() {
-    const mainStretch = this.mobilePaneSnapshot?.mainStretch ?? (this.indicatorPaneGroups ? this.chart.panes()[0].getStretchFactor() : 1);
-    const stretch = this.mobilePaneSnapshot?.stretch || new Map((this.indicatorPaneGroups || []).map(group => [group.root, this.chart.panes()[group.index]?.getStretchFactor()]));
+    const mainStretch = this.paneFocusSnapshot?.mainStretch ?? (this.indicatorPaneGroups ? this.chart.panes()[0].getStretchFactor() : 1);
+    const stretch = this.paneFocusSnapshot?.stretch || new Map((this.indicatorPaneGroups || []).map(group => [group.root, this.chart.panes()[group.index]?.getStretchFactor()]));
     for (const list of this.indSeries.values())
       for (const s of list) {
         try { this.chart.removeSeries(s); } catch { /* already gone */ }
@@ -673,14 +673,14 @@ export class ChartPane {
     const layout = indicatorPaneGroups(ordered, BY_ID, this.cfg.indicatorPaneOrder);
     const paneOf = this.indPaneOf = layout.paneOf;
     this.indicatorPaneGroups = layout.groups;
-    const focusIndex = phoneFocusIndex(this, layout.groups);
-    if (this.mobilePaneSnapshot) {
+    const focusIndex = paneFocusIndex(this, layout.groups);
+    if (this.paneFocusSnapshot) {
       const indicatorFocus = focusIndex !== null && focusIndex > 0;
-      this.main.applyOptions({ visible: indicatorFocus ? false : this.mobilePaneSnapshot.mainVisible });
-      this.volume?.applyOptions({ visible: indicatorFocus ? false : this.mobilePaneSnapshot.volumeVisible });
+      this.main.applyOptions({ visible: indicatorFocus ? false : this.paneFocusSnapshot.mainVisible });
+      this.volume?.applyOptions({ visible: indicatorFocus ? false : this.paneFocusSnapshot.volumeVisible });
       for (const series of this.compareSeries.values()) series.applyOptions({ visible: !indicatorFocus });
-      if (indicatorFocus) this.main.priceScale().applyOptions({ mode: LW.PriceScaleMode.Normal, ...(!this.mobileFocusScaleReady ? { autoScale: true } : {}) });
-      this.mobileFocusScaleReady = indicatorFocus;
+      if (indicatorFocus) this.main.priceScale().applyOptions({ mode: LW.PriceScaleMode.Normal, ...(!this.focusScaleReady ? { autoScale: true } : {}) });
+      this.focusScaleReady = indicatorFocus;
     }
     const markers = [];
     for (const ind of ordered) {
@@ -858,7 +858,7 @@ export class ChartPane {
     for (const note of this.notes || [])
       html += `<div class="row note">${esc(note)}</div>`;
     headers.set(0, html);
-    const focusIndex = phoneFocusIndex(this);
+    const focusIndex = paneFocusIndex(this);
     if (focusIndex !== null) {
       const focused = focusIndex === 0 ? html : collapsed ? '' : headers.get(focusIndex) || '';
       headers.clear(); headers.set(0, focused);
@@ -890,6 +890,7 @@ export class ChartPane {
     if (act === "pane-up" || act === "pane-down") return this.moveIndicatorPane(uid, act === "pane-up" ? -1 : 1);
     if (act === "remove") this.removeIndicator(uid);
     if (act === "hide") {
+      this.app.mobileUI?.restorePane(this);
       ind.hidden = !ind.hidden;
       this.render(false);
       this.app.persist();
@@ -909,6 +910,7 @@ export class ChartPane {
   }
 
   addIndicator(id, params = {}) {
+    this.app.mobileUI?.restorePane(this);
     const uid = newUid();
     this.cfg.indicators.push({ uid, id, params });
     this.render(false);

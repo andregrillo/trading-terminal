@@ -1,6 +1,6 @@
 import { esc, ticker } from './api.js';
 import { BY_ID } from '../lib/indicators.js';
-import { MobilePaneFocus } from './mobile-pane-focus.js';
+import { PaneFocus } from './pane-focus.js';
 import { parseTf } from '../lib/series.js';
 
 export const PHONE_QUERY = '(max-width: 1024px) and (hover: none) and (pointer: coarse)';
@@ -11,7 +11,6 @@ const icons = {
   // Lucide chart-candlestick, ISC licence: https://lucide.dev/icons/chart-candlestick
   chart: '<path d="M9 5v4"/><rect width="4" height="6" x="7" y="9" rx="1"/><path d="M9 15v2"/><path d="M17 3v2"/><rect width="4" height="8" x="15" y="5" rx="1"/><path d="M17 13v3"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/>',
   more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
-  restore: '<path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6M7 7l10 10M17 7L7 17"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
@@ -22,9 +21,10 @@ const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true"${name === 'char
 export class MobileUI {
   constructor(app) {
     this.app = app; this.enabled = false; this.view = 'chart'; this.assetCollapsed = true;
-    this.media = matchMedia(PHONE_QUERY); this.focus = new MobilePaneFocus(this); this.restoreButtons = new Map();
+    this.media = matchMedia(PHONE_QUERY); this.focus = new PaneFocus(this);
   }
   start() {
+    this.focusAbort = new AbortController(); this.focus.bind(this.focusAbort.signal);
     this.changed = () => this.media.matches ? this.enable() : this.disable();
     this.media.addEventListener('change', this.changed);
     if (this.media.matches) this.enable();
@@ -61,17 +61,13 @@ export class MobileUI {
     document.addEventListener('keydown', event => {
       if (event.key !== 'Escape' || !document.querySelector('#modal').classList.contains('hidden')) return;
       if (document.body.classList.contains('mobile-drawings-open')) { this.closeDrawings(); event.preventDefault(); event.stopImmediatePropagation(); }
-      else if (this.app.active?.mobilePaneFocus) { this.restorePane(); event.preventDefault(); event.stopImmediatePropagation(); }
     }, { capture: true, signal: this.abort.signal });
-    this.focus.bind(this.abort.signal);
     this.showChart(); this.app.panels.refreshAssetDetails(); this.sync();
   }
   disable() {
     if (!this.enabled) return;
     this.focus.restoreAll(); this.enabled = false; this.abort.abort();
     this.el.remove(); this.drawerClose.remove(); this.watchHeading.remove();
-    for (const [pane, button] of this.restoreButtons) { button.remove(); delete pane.el.dataset.mobileFocus; }
-    this.restoreButtons.clear();
     document.body.classList.remove('mobile-ui', 'mobile-drawings-open', 'mobile-view-watchlist');
     this.viewport.content = this.originalViewport; this.app.panels.refreshAssetDetails();
     requestAnimationFrame(() => { for (const pane of this.app.panes) pane.legends.scheduleLayout(); });
@@ -90,25 +86,21 @@ export class MobileUI {
     const open = document.body.classList.toggle('mobile-drawings-open'); this.el.querySelector('[data-mobile="drawings"]').setAttribute('aria-expanded', String(open));
   }
   closeDrawings() { document.body.classList.remove('mobile-drawings-open'); this.el?.querySelector('[data-mobile="drawings"]')?.setAttribute('aria-expanded', 'false'); }
-  restorePane(pane = this.app.active) { if (this.enabled) this.focus.restore(pane); }
+  restorePane(pane = this.app.active) { this.focus.restore(pane); }
   onToolChange() {
+    if (this.app.tool !== 'cursor') this.restorePane();
     if (!this.enabled) return;
-    if (this.app.tool !== 'cursor') { this.restorePane(); this.closeDrawings(); }
+    if (this.app.tool !== 'cursor') this.closeDrawings();
     this.sync();
   }
   sync() {
+    this.focus.sync();
     if (!this.enabled || !this.app.active) return;
     const pane = this.app.active;
     this.el.querySelector('[data-mobile="symbol"]').textContent = ticker(pane.cfg.symbol);
     this.el.querySelector('[data-mobile="timeframe"]').textContent = pane.cfg.tf;
     this.el.querySelector('[data-mobile="drawings"]').classList.toggle('active', this.app.tool !== 'cursor');
     for (const name of ['chart', 'watchlist']) { const button = this.el.querySelector(`[data-mobile="${name}"]`); button.classList.toggle('active', this.view === name); button.setAttribute('aria-current', this.view === name ? 'page' : 'false'); }
-    for (const item of this.app.panes) {
-      if (item.mobilePaneFocus) {
-        item.el.dataset.mobileFocus = item.mobilePaneFocus === 'price' ? 'price' : 'indicator';
-        if (!this.restoreButtons.has(item)) { const button = document.createElement('button'); button.className = 'mobile-pane-restore'; button.innerHTML = svg('restore'); button.title = 'Restore all panes'; button.setAttribute('aria-label', 'Restore all panes'); button.onclick = () => this.restorePane(item); item.el.appendChild(button); this.restoreButtons.set(item, button); }
-      } else { this.restoreButtons.get(item)?.remove(); this.restoreButtons.delete(item); delete item.el.dataset.mobileFocus; }
-    }
   }
   menu(title, buttons, extra = '') {
     this.closeDrawings();
@@ -125,7 +117,7 @@ export class MobileUI {
   more() {
     const pane = this.app.active;
     this.menu('Chart', [
-      ...(pane.mobilePaneFocus ? [{ label: 'Restore all panes', action: () => this.restorePane() }] : []),
+      ...(pane.paneFocus ? [{ label: 'Restore all panes', action: () => this.restorePane() }] : []),
       { label: 'Chart type', action: () => this.chartTypes() }, { label: 'Settings', action: () => { this.restorePane(); this.app.openSettings(); } },
       { label: pane.cfg.log ? 'Linear scale' : 'Log scale', action: () => { this.restorePane(); document.querySelector('#logBtn').click(); } },
       { label: pane.cfg.invertScale ? 'Restore chart direction' : 'Invert chart', action: () => pane.toggleInversion() },

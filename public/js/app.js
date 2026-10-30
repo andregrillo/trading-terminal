@@ -274,6 +274,7 @@ class App {
       ([v, l]) => `<option value="${v}">${l}</option>`,
     ).join("");
     $("#chartType").onchange = (e) => {
+      this.mobileUI?.restorePane();
       this.active.cfg.type = e.target.value;
       this.active.render(true);
       this.persist();
@@ -303,6 +304,7 @@ class App {
     };
     $("#alertBtn").onclick = () => this.panels.openAlertDialog();
     $("#logBtn").onclick = () => {
+      this.mobileUI?.restorePane();
       this.active.cfg.log = !this.active.cfg.log;
       this.active.render(false);
       this.syncToolbar();
@@ -555,6 +557,7 @@ class App {
   }
 
   openIndicatorSettings(pane, ind) {
+    this.mobileUI?.restorePane(pane);
     const def = BY_ID[ind.id];
     const params = typeof def.migrateParams === 'function' ? def.migrateParams(ind.params || {}) : ind.params;
     const fields = (def.inputs || [])
@@ -645,6 +648,7 @@ class App {
   }
 
   openSettings() {
+    this.mobileUI?.focus.restoreAll();
     const s = this.settings;
     const card = this.modal(
       "Settings",

@@ -29,8 +29,8 @@ test('indicator actions use their own local scale and preserve all indicator inp
   pane.cfg.indicators[0].params.length = 99; assert.equal(target.indicator.params.length, 21);
 });
 
-test('expanded indicator panes retain indicator context instead of becoming price alerts', () => {
-  const pane = chart(); pane.app.mobileUI.enabled = true; pane.mobilePaneFocus = 'rsi-1';
+for (const enabled of [false, true]) test(`expanded indicator panes retain indicator context (${enabled ? 'phone' : 'desktop'})`, () => {
+  const pane = chart(); pane.app.mobileUI.enabled = enabled; pane.paneFocus = 'rsi-1';
   const target = levelTarget(pane, point); assert.equal(target.root, 'rsi-1'); assert.equal(levelAlertPreset(target).rules[0].left.kind, 'ind');
 });
 
