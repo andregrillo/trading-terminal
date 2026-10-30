@@ -33,14 +33,16 @@ export class IndicatorGraphics {
         ctx.beginPath(); ctx.moveTo(x, middle); ctx.lineTo(size.width, middle); ctx.stroke();
       }
     } else {
+      // Keep the labels anchored to the latest bar, including when it is off-screen.
+      const x = this.pane.chart.timeScale().logicalToCoordinate(this.pane.shown.length - 1 + 17);
+      if (!Number.isFinite(x) || x >= size.width) { ctx.restore(); return; }
       ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
       const labels = (this.result.priceLabels || []).map((label) => ({ ...label, y: this.series.priceToCoordinate(label.price) })).filter((label) => Number.isFinite(label.y)).sort((a, b) => a.y - b.y);
       let previousY = -Infinity;
       for (const label of labels) {
         const text = `${label.text} · ${this.pane.formatPrice(label.price)}`;
         const width = ctx.measureText(text).width + 12;
-        const future = this.pane.chart.timeScale().logicalToCoordinate(this.pane.shown.length - 1 + 17);
-        const x = Math.max(0, Math.min(future ?? size.width - width, size.width - width - 4));
+        if (x + width <= 0) continue;
         const y = Math.max(10, Math.min(size.height - 10, Math.max(label.y, previousY + 20)));
         previousY = y;
         const color = this.colors[label.key] || '#9598a1';

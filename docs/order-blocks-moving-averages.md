@@ -27,8 +27,10 @@ terms: attribution, noncommercial use, and share alike.
   block average line width and do not change calculations, colours or timeframes.
 - The original white, teal and orange average lines, transparency controls,
   visibility switches and average price labels. Colours for average lines are
-  in the settings' Colours section. Labels are kept within the visible chart;
-  when there is room they sit 17 bars to the right of the newest candle.
+  in the settings' Colours section. Labels stay anchored 17 bars to the right of
+  the newest candle. They move with the chart and disappear beyond the edge when
+  you scroll into history, instead of sticking to the screen. Leave room after
+  the newest candle to see them.
 - SMA 200's style setting is applied. The supplied Pine declares that setting
   but does not actually pass it to its plot.
 

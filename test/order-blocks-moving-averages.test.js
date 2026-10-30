@@ -4,6 +4,7 @@ import def, { mapAverage, pineEma, volumePivot, migrateParams } from '../custom/
 import { registerIndicator, compute, defaults, indicatorProblems } from '../public/lib/indicators.js';
 import { conditionFn, backtest } from '../public/lib/backtest.js';
 import { requiredTimeframes, loadIndicatorContext } from '../public/lib/indicator-data.js';
+import { IndicatorGraphics } from '../public/js/indicator-graphics.js';
 
 const id = 'custom:order-blocks-moving-averages';
 registerIndicator({ ...def, id });
@@ -199,4 +200,45 @@ test('all three moving averages have independent thickness without changing valu
   for (const key of ['sma200', 'ema50', 'sma50', 'rectangles', 'bullFormed', 'bearFormed', 'priceLabels']) assert.deepEqual(after[key], before[key]);
   assert.equal(after.plotStyles.sma200.lineStyle, before.plotStyles.sma200.lineStyle);
   assert.throws(() => compute(id, bars, { sma50_width: '0' }, context), /thickness/);
+});
+
+function paintLabels(x, barCount = 100) {
+  const calls = [], indices = [];
+  const pane = { shown: Array(barCount), chart: { timeScale: () => ({ logicalToCoordinate: index => { indices.push(index); return x; } }) }, formatPrice: String };
+  const result = { priceLabels: [
+    { key: 'sma200', price: 100, text: 'SMA 200 D' },
+    { key: 'ema50', price: 120, text: 'EMA 50 W' },
+    { key: 'sma50', price: 140, text: 'SMA 50 D' },
+  ] };
+  const graphics = new IndicatorGraphics(pane, result, {});
+  graphics.attached({ series: { priceToCoordinate: price => price } });
+  const ctx = { save() {}, restore() {}, beginPath() {}, rect() {}, clip() {}, measureText: () => ({ width: 100 }), fillRect: (...args) => calls.push(args), fillText() {} };
+  graphics.draw(ctx, { width: 500, height: 300 }, 'top');
+  return { calls, indices };
+}
+
+test('moving-average labels move with the latest candle instead of clamping to the right edge', () => {
+  const before = paintLabels(350), after = paintLabels(450);
+  assert.deepEqual(before.calls.map(c => c[0]), [350, 350, 350]);
+  assert.deepEqual(after.calls.map(c => c[0]), [450, 450, 450]);
+});
+
+test('scrolling into history moves all three labels off the right edge', () => {
+  assert.deepEqual(paintLabels(650).calls, []);
+  assert.deepEqual(paintLabels(500).calls, []);
+});
+
+test('labels clip naturally at the left edge instead of sticking there', () => {
+  assert.deepEqual(paintLabels(-50).calls.map(c => c[0]), [-50, -50, -50]);
+  assert.deepEqual(paintLabels(-200).calls, []);
+});
+
+test('missing chart coordinates do not produce screen-pinned fallback labels', () => {
+  assert.deepEqual(paintLabels(null).calls, []);
+  assert.deepEqual(paintLabels(NaN).calls, []);
+});
+
+test('label anchors retain the original 17-bar offset, including the replay slice', () => {
+  assert.deepEqual(paintLabels(100).indices, [116]);
+  assert.deepEqual(paintLabels(100, 20).indices, [36]);
 });
