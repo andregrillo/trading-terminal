@@ -2,8 +2,8 @@
 
 Everything the app does goes through a small HTTP API on your own computer, so your scripts can use it too: pull bars and quotes, run backtests with the quant checks, and set alerts that call your webhook. Working examples in Python and Rust are in [`examples/`](../examples).
 
-- **Address:** `http://127.0.0.1:3777` (or the port `npm start` printed). `PORT=4000 npm start` picks one.
-- **This computer only.** The server answers requests addressed to `localhost` or `127.0.0.1`.
+- **Address:** `http://127.0.0.1:3777` on this computer, or one of the local network addresses printed at startup. `PORT=4000 node scripts/launch.js` picks a port.
+- **Network access.** The server listens on `0.0.0.0` by default and accepts requests addressed to localhost, this computer's interface addresses, and explicitly allowed hostnames such as its private Tailscale name. Set `HOST=127.0.0.1` to restrict the listener to this computer. Connected devices share the app's saved state; there is no separate login.
 - **Writes need one header.** Every `POST`, `PUT`, `PATCH` and `DELETE` carries `x-qt: 1`. Reads need nothing.
 - **JSON in and out.** Errors come back as `{ "error": "..." }` with a 4xx or 5xx status.
 - **Times** are Unix seconds (UTC). Symbols are `EXCHANGE:TICKER` like the app's search (`BINANCE:BTCUSDT`, `US:AAPL`, `FX:EURUSD`, `CME:NQ1!`), and plain tickers (`btc`, `aapl`) are resolved for you.
@@ -15,7 +15,7 @@ The API reads data and runs research. Placing real orders isn't part of it; that
 
 | Request | Returns |
 |---|---|
-| `GET /api/health` | `{ ok, version, providers, feeds, alerts }`: is it running, which sources answer, which of your own keys are set |
+| `GET /api/health` | `{ ok, version, listenHost, providers, feeds, alerts }`: is it running, which address it listens on, which sources answer, which of your own keys are set |
 | `GET /api/resolve?symbol=btc` | `{ id, exchange, ticker }`: what a typed symbol means |
 | `GET /api/search?q=apple` | Up to 30 `{ symbol, name, type, exchange }` matches |
 | `GET /api/candles?symbol=BTCUSDT&tf=1h&limit=500` | `{ symbol, tf, provider, candles: [{ time, open, high, low, close, volume }], notes }`, oldest first. `limit` is 10 to 20000 (default 1500) |

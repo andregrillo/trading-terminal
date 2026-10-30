@@ -15,7 +15,9 @@ On your Mac, double-click `start.command`, or run this inside the app folder:
 node scripts/launch.js
 ```
 
-The launcher opens your browser and starts the app in the background. When
+The launcher opens your browser and starts the app in the background. It listens
+on `0.0.0.0` and prints this computer's network addresses, so devices on the same
+local network can open the app using one of those addresses. When
 Tailscale is connected, it also prints the private address to open on your iPhone.
 Keep the Mac awake and connected to Tailscale. Startup preserves other Tailscale
 services on this computer. To stop the app and its Tailscale sharing route:
@@ -24,12 +26,20 @@ services on this computer. To stop the app and its Tailscale sharing route:
 node scripts/stop.js
 ```
 
-Run `node scripts/launch.js --no-tailscale` for access only on this computer.
+Use the addresses printed at startup: the local network port can differ from the
+Tailscale port if that port is already in use. Startup updates this app's recorded
+Tailscale route when its local port changes.
+
+Run `node scripts/launch.js --no-tailscale` to use localhost and your local network
+without Tailscale sharing. For access only on this computer, run
+`HOST=127.0.0.1 node scripts/launch.js --no-tailscale` on Mac or Linux.
+Devices that can reach the app share its saved charts and watchlists; there is no
+separate app login.
 Node.js 18 or later is required. There are no npm dependencies to install.
 
 ## On your iPhone
 
-Open the private Tailscale address in Safari. The phone layout has just
+Open the local network address or private Tailscale address in Safari. The phone layout has just
 **Watchlist** and **Chart** tabs. Tap a watchlist symbol to open its chart.
 The pencil button opens the drawing tools; choosing a tool closes that drawer.
 Timeframes, indicators and extra chart controls have their own bottom buttons.

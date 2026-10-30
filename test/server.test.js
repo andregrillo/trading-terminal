@@ -4,10 +4,13 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import http from 'node:http';
+import { lanUrls } from '../lib/network.js';
+import { assertSharingRoute } from '../scripts/tailscale.js';
 
 process.env.QT_OFFLINE = '1';
 process.env.QT_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'qt-test-'));
 process.env.QT_ALLOWED_HOSTS = 'quant-test.example.ts.net';
+delete process.env.HOST;
 const { start } = await import('../server.js');
 let server, base;
 const H = { 'x-qt': '1', 'Content-Type': 'application/json' };
@@ -19,6 +22,8 @@ test('health and the app page load', async () => {
   const h = await (await fetch(`${base}/api/health`)).json();
   assert.equal(h.ok, true);
   assert.equal(h.name, 'Trade Terminal');
+  assert.equal(h.listenHost, '0.0.0.0');
+  assert.equal(server.address().address, '0.0.0.0');
   const page = await (await fetch(`${base}/`)).text();
   assert.ok(page.includes('Trade Terminal'));
   assert.match(page, /<title>Trade Terminal<\/title>/);
@@ -28,6 +33,40 @@ test('health and the app page load', async () => {
   const shared = await fetch(`${base}/public/lib/series.js`);
   assert.equal(shared.status, 200);
   assert.match(await shared.text(), /export function resample/);
+});
+
+test('local network clients can load and save while cross-site writes remain blocked', async t => {
+  const url = lanUrls(server.address().port)[0];
+  if (!url) return t.skip('No external IPv4 interface is available on this computer.');
+  assert.equal((await fetch(`${url}/`)).status, 200);
+  const health = await (await fetch(`${url}/api/health`)).json();
+  assert.equal(health.ok, true); assert.equal(health.listenHost, '0.0.0.0');
+  const state = await (await fetch(`${url}/api/state`)).json();
+  const write = headers => fetch(`${url}/api/state`, { method: 'PUT', headers, body: JSON.stringify(state) });
+  assert.equal((await write({ Origin: url })).status, 403);
+  assert.equal((await write({ ...H, Origin: 'http://untrusted.example' })).status, 403);
+  assert.equal((await write({ ...H, Origin: `${url}0` })).status, 403, 'a different origin port is rejected');
+  assert.equal((await write({ ...H, Origin: url })).status, 200);
+  assert.deepEqual(await (await fetch(`${url}/api/state`)).json(), state);
+});
+
+test('Tailscale can follow this app to a new port without taking over another service', () => {
+  const hostname = 'test.example.ts.net', key = `${hostname}:3777`;
+  const config = { TCP: { 3777: { HTTP: true }, 80: { HTTP: true } }, Web: {
+    [key]: { Handlers: { '/': { Proxy: 'http://127.0.0.1:3777' } } },
+    [`${hostname}:80`]: { Handlers: { '/': { Proxy: 'http://127.0.0.1:7317' } } },
+  } };
+  const original = structuredClone(config), target = 'http://127.0.0.1:3778';
+  const saved = { hostname, port: 3777, target: 'http://127.0.0.1:3777' };
+  assert.doesNotThrow(() => assertSharingRoute(config, hostname, 3777, target, saved));
+  assert.deepEqual(config, original, 'checking ownership must not modify other routes');
+  assert.throws(() => assertSharingRoute(config, hostname, 3777, target), /another service/);
+  assert.throws(() => assertSharingRoute(config, hostname, 3777, target, { ...saved, target: 'http://127.0.0.1:9999' }), /another service/);
+  assert.throws(() => assertSharingRoute(config, hostname, 80, target, saved), /another service/);
+  config.Web[key].Handlers['/other'] = { Proxy: 'http://127.0.0.1:9999' };
+  assert.throws(() => assertSharingRoute(config, hostname, 3777, target, saved), /another service/);
+  delete config.Web[key].Handlers['/other']; config.AllowFunnel = { [key]: true };
+  assert.throws(() => assertSharingRoute(config, hostname, 3777, target, saved), /public through Funnel/);
 });
 
 test('local help opens without promotional links and the retired sales module is unavailable', async () => {
@@ -203,7 +242,7 @@ test('static files cannot escape their folder', async () => {
 test('POST /api/shutdown stops a running copy (used by the installer to update)', async () => {
   const { spawn } = await import('node:child_process');
   const port = 41000 + Math.floor(Math.random() * 1000);
-  const child = spawn(process.execPath, ['server.js'], { cwd: new URL('..', import.meta.url), env: { ...process.env, PORT: String(port), QT_OFFLINE: '1' }, stdio: 'pipe' });
+  const child = spawn(process.execPath, ['server.js'], { cwd: new URL('..', import.meta.url), env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), QT_OFFLINE: '1' }, stdio: 'pipe' });
   const exited = new Promise((r) => child.on('exit', r));
   // Deadlines, not a fixed number of polls: on a busy machine the copy can take several seconds to start.
   const within = (ms, p, what) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(`${what} took over ${ms / 1000}s`)), ms).unref())]);
@@ -213,6 +252,8 @@ test('POST /api/shutdown stops a running copy (used by the installer to update)'
       child.stdout.on('data', (d) => { out += d; const m = /localhost:(\d+)/.exec(out); if (m) ok(Number(m[1])); });
       exited.then((code) => no(new Error(`the copy exited (${code}) before it started:\n${out}`)));
     }), 'starting the copy');
+    const health = await (await fetch(`http://127.0.0.1:${actual}/api/health`)).json();
+    assert.equal(health.listenHost, '127.0.0.1', 'an explicit localhost-only listener is still supported');
     assert.equal((await fetch(`http://127.0.0.1:${actual}/api/shutdown`, { method: 'POST' })).status, 403, 'needs the app header');
     assert.equal((await fetch(`http://127.0.0.1:${actual}/api/shutdown`, { method: 'POST', headers: { 'x-qt': '1' } })).status, 200);
     assert.equal(await within(10000, exited, 'shutting down'), 0);

@@ -61,9 +61,11 @@ Package metadata: `https://registry.npmjs.org/lightweight-charts/5.2.1`.
   check required to use the local terminal.
 - Charts, drawings, alerts, watchlists and paper trading state are stored as
   local files under `data/`.
-- The launcher binds the app to 127.0.0.1 and shares it through Tailscale Serve.
-  Access over Tailscale is governed by the user's network access rules; the app
-  does not add a separate login page.
+- Network update, 30 October 2026: the launcher now binds the app to `0.0.0.0`
+  for local network access, while retaining Tailscale Serve. The server accepts
+  this computer's interface addresses and configured hostnames; writes still
+  require the app header and a matching origin when one is supplied. Connected
+  devices share saved state, and the app does not add a separate login page.
 - Custom indicators execute JavaScript in the browser and in Node on this Mac.
   This is not an isolated scripting sandbox. Only add code you trust.
 

@@ -7,7 +7,6 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import { spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as data from "./lib/providers.js";
@@ -24,6 +23,7 @@ import { quantChecks } from "./public/lib/quant.js";
 import { loadIndicatorContext } from "./public/lib/indicator-data.js";
 import { parseTf } from "./public/lib/series.js";
 import { relaunchForProxy, proxyNote } from "./lib/proxy.js";
+import { DEFAULT_HOST, lanAddresses, lanUrls } from "./lib/network.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, "public");
@@ -31,7 +31,7 @@ const CUSTOM = path.join(ROOT, "custom");
 const VERSION = JSON.parse(
   fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
 ).version;
-const HOST = process.env.HOST || "127.0.0.1";
+const HOST = process.env.HOST || DEFAULT_HOST;
 const START_PORT = Number(process.env.PORT) || 3777;
 // Explicit names supplied by the launcher for this machine's private Tailscale route.
 const EXTRA_HOSTS = (process.env.QT_ALLOWED_HOSTS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -101,7 +101,7 @@ function allowed(req) {
   const host = (req.headers.host || "")
     .replace(/:\d+$/, "")
     .replace(/^\[|\]$/g, "").toLowerCase();
-  const okHosts = new Set(["localhost", "127.0.0.1", "::1", ...lanAddresses(), ...EXTRA_HOSTS]);
+  const okHosts = new Set(["localhost", "127.0.0.1", "::1", ...lanAddresses(HOST), ...EXTRA_HOSTS]);
   if (!okHosts.has(host)) return false;
   if (req.method !== "GET" && req.method !== "HEAD") {
     if (req.headers["x-qt"] !== "1") return false;
@@ -115,14 +115,6 @@ function allowed(req) {
     }
   }
   return true;
-}
-
-function lanAddresses() {
-  if (HOST === "127.0.0.1" || HOST === "localhost") return [];
-  return Object.values(os.networkInterfaces())
-    .flat()
-    .filter(Boolean)
-    .map((i) => i.address);
 }
 
 function serveStatic(res, baseDir, rel) {
@@ -209,7 +201,7 @@ async function handle(req, res) {
     return send(
       res,
       403,
-      "Forbidden: Trade Terminal only answers to this computer.",
+      "Forbidden: this address or request is not allowed.",
     );
   const url = new URL(req.url, "http://localhost");
   let p;
@@ -239,6 +231,7 @@ async function handle(req, res) {
         version: VERSION,
         node: process.version,
         platform: process.platform,
+        listenHost: HOST,
         providers: data.health,
         feeds: feeds.configured(),
         yahoo: data.yahooAvailable() ? "available" : "rate limited",
@@ -555,12 +548,10 @@ if (isMain) {
     `\n  Trade Terminal ${VERSION} is running\n\n  Open:  ${url}\n  Stop:  Ctrl+C\n  Data:  ${store.DATA_DIR}\n`,
   );
   if (proxyNote()) console.log(`  ${proxyNote()}\n`);
-  if (HOST !== "127.0.0.1" && HOST !== "localhost")
+  const urls = lanUrls(port, HOST);
+  if (urls.length)
     console.log(
-      `  Also on your network: ${lanAddresses()
-        .filter((a) => a.includes(".") && a !== "127.0.0.1")
-        .map((a) => `http://${a}:${port}`)
-        .join("  ")}\n`,
+      `  Also on your network: ${urls.join("  ")}\n`,
     );
   if (process.argv.includes("--open") || process.env.QT_OPEN === "1")
     openBrowser(url);

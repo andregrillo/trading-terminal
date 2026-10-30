@@ -26,16 +26,25 @@ export function findTailscale() {
   return null;
 }
 
+export function assertSharingRoute(config, hostname, remotePort, target, saved = null) {
+  const key = `${hostname}:${remotePort}`;
+  const handlers = config.Web?.[key]?.Handlers;
+  const owned = saved?.hostname === hostname && saved?.port === remotePort && saved?.target === handlers?.['/']?.Proxy;
+  // Refuse to replace a different service or a route that was made public with Funnel.
+  if (config.AllowFunnel?.[key]) throw new Error('This Tailscale port is public through Funnel. Choose another QT_TAILSCALE_PORT.');
+  if (config.TCP?.[remotePort] && (!config.TCP[remotePort].HTTP || !handlers || Object.keys(handlers).length !== 1 || (handlers['/']?.Proxy !== target && !owned))) {
+    throw new Error(`Tailscale port ${remotePort} belongs to another service. Choose another QT_TAILSCALE_PORT.`);
+  }
+}
+
 export function shareTailscale(ts, localPort, remotePort) {
   const config = JSON.parse(run(ts.bin, ['serve', 'status', '--json']));
   const target = `http://127.0.0.1:${localPort}`;
   const key = `${ts.hostname}:${remotePort}`;
-  const handlers = config.Web?.[key]?.Handlers;
-  // Refuse to replace a different service or a route that was made public with Funnel.
-  if (config.AllowFunnel?.[key]) throw new Error('This Tailscale port is public through Funnel. Choose another QT_TAILSCALE_PORT.');
-  if (config.TCP?.[remotePort] && (!config.TCP[remotePort].HTTP || !handlers || Object.keys(handlers).length !== 1 || handlers['/']?.Proxy !== target)) {
-    throw new Error(`Tailscale port ${remotePort} belongs to another service. Choose another QT_TAILSCALE_PORT.`);
-  }
+  let saved = null;
+  try { saved = JSON.parse(fs.readFileSync(record, 'utf8')); } catch { /* An unrecorded route is never taken over. */ }
+  assertSharingRoute(config, ts.hostname, remotePort, target, saved);
+  // A port change can retarget this app's recorded route, preserving other services.
   run(ts.bin, ['serve', '--bg', `--http=${remotePort}`, target]);
   const url = `http://${key}`;
   fs.mkdirSync(path.dirname(record), { recursive: true });
