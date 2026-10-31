@@ -31,6 +31,7 @@ export class MobileUI {
   }
   enable() {
     if (this.enabled) return;
+    for (const pane of this.app.panes) pane.viewport?.save();
     this.enabled = true; this.abort = new AbortController();
     this.viewport = document.querySelector('meta[name="viewport"]'); this.originalViewport = this.viewport.content;
     this.viewport.content = this.originalViewport + ', viewport-fit=cover';
@@ -63,14 +64,17 @@ export class MobileUI {
       if (document.body.classList.contains('mobile-drawings-open')) { this.closeDrawings(); event.preventDefault(); event.stopImmediatePropagation(); }
     }, { capture: true, signal: this.abort.signal });
     this.showChart(); this.app.panels.refreshAssetDetails(); this.sync();
+    requestAnimationFrame(() => requestAnimationFrame(() => { for (const pane of this.app.panes) pane.viewport?.restore(); }));
   }
   disable() {
     if (!this.enabled) return;
-    this.focus.restoreAll(); this.enabled = false; this.abort.abort();
+    this.focus.restoreAll();
+    for (const pane of this.app.panes) pane.viewport?.save();
+    this.enabled = false; this.abort.abort();
     this.el.remove(); this.drawerClose.remove(); this.watchHeading.remove();
     document.body.classList.remove('mobile-ui', 'mobile-drawings-open', 'mobile-view-watchlist');
     this.viewport.content = this.originalViewport; this.app.panels.refreshAssetDetails();
-    requestAnimationFrame(() => { for (const pane of this.app.panes) pane.legends.scheduleLayout(); });
+    requestAnimationFrame(() => requestAnimationFrame(() => { for (const pane of this.app.panes) { pane.viewport?.restore(); pane.legends.scheduleLayout(); } }));
   }
   showChart() {
     if (!this.enabled) return;

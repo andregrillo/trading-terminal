@@ -16,6 +16,19 @@ export class DrawingHistory {
 
 export const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618];
 export const FILL_TOOLS = ['rect', 'channel', 'measure', 'long', 'short', 'text'];
+export function measurementStats(a, b, logicalOf = () => 0) {
+  return { change: b.price - a.price, percent: a.price ? (b.price - a.price) / a.price * 100 : null,
+    bars: Math.abs(Math.round(logicalOf(b.time) - logicalOf(a.time))), seconds: Math.abs(b.time - a.time) };
+}
+export function measurementDuration(seconds) {
+  let remaining = Math.max(0, Math.round(seconds));
+  const parts = [];
+  for (const [unit, size] of [['d', 86400], ['h', 3600], ['m', 60], ['s', 1]]) {
+    const value = Math.floor(remaining / size); remaining %= size;
+    if (value) parts.push(`${value}${unit}`);
+  }
+  return parts.join(' ') || '0s';
+}
 export function drawingStyle(d) {
   const directional = d.points?.[1]?.price >= d.points?.[0]?.price ? '#089981' : '#f23645';
   const color = d.color || (d.type === 'fib' || ['long', 'short'].includes(d.type) ? '#787b86' : d.type === 'measure' ? directional : '#2962ff');
@@ -84,9 +97,18 @@ export function drawingGeometry(d, view, size) {
   } else if (d.type === 'measure' && b) {
     polygon(box(a.x, a.y, b.x, b.y));
     segment({ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y });
-    const count = Math.round((view.logicalOf?.(b.time) ?? 0) - (view.logicalOf?.(a.time) ?? 0));
-    const diff = b.price - a.price, percent = a.price ? diff / a.price * 100 : 0;
-    if (d.showLabels !== false) label(`${diff >= 0 ? '+' : ''}${price(diff)} (${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%)  ${count} bars`, (a.x + b.x) / 2, b.y + (diff >= 0 ? -14 : 14), { align: 'center', background: style.color, color: '#ffffff' });
+    segment({ x: a.x, y: a.y }, { x: b.x, y: a.y });
+    for (const x of [a.x, b.x]) segment({ x, y: a.y - 4 }, { x, y: a.y + 4 });
+    for (const y of [a.y, b.y]) segment({ x: (a.x + b.x) / 2 - 4, y }, { x: (a.x + b.x) / 2 + 4, y });
+    const stats = measurementStats(a, b, view.logicalOf), sign = stats.change >= 0 ? '+' : '';
+    const percent = stats.percent == null ? 'n/a' : `${stats.percent >= 0 ? '+' : ''}${stats.percent.toFixed(2)}%`;
+    if (d.showLabels !== false) {
+      const text = [`${sign}${price(stats.change)} (${percent})`, `${stats.bars} ${stats.bars === 1 ? 'bar' : 'bars'} · ${measurementDuration(stats.seconds)}`];
+      const half = Math.min(size.width / 2 - 6, Math.max(...text.map(value => value.length)) * style.fontSize * .32 + 6);
+      const x = Math.max(half + 4, Math.min(size.width - half - 4, (a.x + b.x) / 2));
+      const top = Math.min(a.y, b.y), y = top >= style.fontSize * 3 + 10 ? top - style.fontSize * 2 - 12 : Math.min(size.height - style.fontSize * 2 - 12, Math.max(a.y, b.y) + 16);
+      text.forEach((value, index) => label(value, x, Math.max(style.fontSize, y) + index * (style.fontSize + 6), { align: 'center', background: style.color, color: '#ffffff' }));
+    }
   } else if (['long', 'short'].includes(d.type) && b) {
     const dir = d.type === 'long' ? 1 : -1, risk = Math.abs(a.price - b.price) || Math.abs(a.price) * 0.01 || 1;
     const stop = a.price - dir * risk, target = a.price + dir * risk * (d.rr || 2);

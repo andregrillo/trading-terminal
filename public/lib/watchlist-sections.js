@@ -61,6 +61,13 @@ export function moveSymbol(state, list, symbol, id, beforeSymbol = null) {
   target.symbols.splice(index < 0 ? target.symbols.length : index, 0, symbol);
   target.collapsed = false; save(state, list, groups);
 }
+export function placeSymbol(state, list, symbol, targetSymbol, after = false) {
+  const groups = sectionGroups(state, list), group = groups.find(group => group.symbols.includes(targetSymbol));
+  if (!group) throw new Error('That destination symbol is no longer in this watchlist.');
+  if (symbol === targetSymbol) return;
+  const members = group.symbols.filter(item => item !== symbol), index = members.indexOf(targetSymbol);
+  moveSymbol(state, list, symbol, group.id, after ? members[index + 1] : targetSymbol);
+}
 export function moveSection(state, list, id, direction) {
   const groups = sectionGroups(state, list), index = groups.findIndex((group) => group.id === id), next = index + direction;
   if (index <= 0 || next <= 0 || next >= groups.length) return;

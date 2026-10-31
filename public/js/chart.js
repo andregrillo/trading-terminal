@@ -20,6 +20,8 @@ import { DrawingEditor } from "./drawing-editor.js";
 import { ChartLegends } from "./chart-legends.js";
 import { LevelActions } from "./level-actions.js";
 import { paneFocusIndex } from "./pane-focus.js";
+import { captureScaleView, restoreScaleView } from "./scale-view.js";
+import { ChartViewport } from "./chart-viewport.js";
 import { indicatorPaneGroups, movePaneOrder } from "../lib/indicator-panes.js";
 import { indicatorScaleLabelVisible, indicatorLevelLabelVisible } from "../lib/indicator-display.js";
 import { VolumeProfile, SessionVolumeProfile } from "./volume-profile.js";
@@ -162,6 +164,7 @@ export class ChartPane {
     this.createChart();
     this.legends = new ChartLegends(this);
     this.levelActions = new LevelActions(this);
+    this.viewport = new ChartViewport(this);
     el.addEventListener("pointerdown", () => app.setActive(this), true);
     this.bindLiveRecovery();
   }
@@ -394,6 +397,7 @@ export class ChartPane {
 
   // ---------- data ----------
   async load({ keepView = false } = {}) {
+    this.viewport?.beforeLoad();
     const token = (this.loadToken = {});
     this.stopLive();
     this.showMsg(`Loading ${ticker(this.cfg.symbol)}…`);
@@ -415,7 +419,10 @@ export class ChartPane {
         this.bars.length ? "" : "No data for this symbol and timeframe.",
       );
       await this.loadCompare();
+      if (token !== this.loadToken) return;
+      this.setPriceContext(r.symbol, this.cfg.tf);
       this.render(!keepView);
+      this.viewport?.loaded();
       this.startLive();
       this.app.onPaneLoaded(this);
     } catch (e) {
@@ -441,6 +448,13 @@ export class ChartPane {
         }
       }),
     );
+  }
+
+  setPriceContext(symbol, tf) {
+    const context = JSON.stringify([symbol, tf]);
+    if (this.priceContext === context) return;
+    this.main.priceScale().applyOptions({ autoScale: true });
+    this.priceContext = context;
   }
 
   showMsg(text) {
@@ -504,8 +518,10 @@ export class ChartPane {
 
   render(resetView) {
     const prevRange = this.chart.timeScale().getVisibleLogicalRange();
-    const atEnd =
-      prevRange && this.shown.length && prevRange.to >= this.shown.length - 3;
+    // Capture before changing pane zero between a focused oscillator and prices.
+    const scaleViews = this.captureIndicatorScaleViews();
+    const previousLength = this.shown.length;
+    const previousLastTime = this.shown.at(-1)?.time;
     if (
       this.mainType !== this.cfg.type ||
       !!this.volume !==
@@ -543,19 +559,25 @@ export class ChartPane {
           : LW.PriceScaleMode.Normal,
     });
     this.renderCompare();
-    this.renderIndicators();
+    this.renderIndicators(scaleViews);
     this.drawings.update();
     if (resetView && this.shown.length)
       this.chart.timeScale().setVisibleLogicalRange({
         from: Math.max(0, this.shown.length - 160),
         to: this.shown.length + 8,
       });
-    if (!resetView && this.shown.length && (this.replay || atEnd)) {
-      const w = prevRange ? Math.max(20, prevRange.to - prevRange.from) : 160;
+    if (!resetView && this.replay && this.shown.length && this.shown.at(-1)?.time !== previousLastTime) {
+      const w = prevRange ? prevRange.to - prevRange.from : 160;
       const n = this.shown.length;
       this.chart
         .timeScale()
         .setVisibleLogicalRange({ from: n - w + 8, to: n + 8 });
+    } else if (!resetView && prevRange) {
+      // Keep the user's exact zoom and empty space. Follow actual new candles only
+      // when the last candle was visible; indicator refreshes must never recenter.
+      const following = !this.replay && previousLength > 0 && prevRange.from <= previousLength - 1 && prevRange.to >= previousLength - 1;
+      const shift = following ? this.shown.length - previousLength : 0;
+      this.chart.timeScale().setVisibleLogicalRange({ from: prevRange.from + shift, to: prevRange.to + shift });
     }
     this.updateLegend();
   }
@@ -645,7 +667,8 @@ export class ChartPane {
     this.render(false);
   }
 
-  renderIndicators() {
+  renderIndicators(scaleViews = this.captureIndicatorScaleViews()) {
+    const range = this.chart.timeScale().getVisibleLogicalRange();
     const mainStretch = this.paneFocusSnapshot?.mainStretch ?? (this.indicatorPaneGroups ? this.chart.panes()[0].getStretchFactor() : 1);
     const stretch = this.paneFocusSnapshot?.stretch || new Map((this.indicatorPaneGroups || []).map(group => [group.root, this.chart.panes()[group.index]?.getStretchFactor()]));
     for (const list of this.indSeries.values())
@@ -761,6 +784,32 @@ export class ChartPane {
     this.markers.setMarkers(all);
     this.applyScaleDirection();
     this.levelActions?.renderLines();
+    this.restoreIndicatorScaleViews(scaleViews);
+    // Removing and recreating indicator series can change the chart's time scale.
+    if (range) this.chart.timeScale().setVisibleLogicalRange(range);
+  }
+
+  captureIndicatorScaleViews() {
+    const views = new Map();
+    for (const group of this.indicatorPaneGroups || []) {
+      const series = group.indicators.map(uid => this.indSeries.get(uid)?.[0]).find(Boolean);
+      const scale = series?.priceScale();
+      if (!scale || scale.options().autoScale) continue;
+      const view = captureScaleView(scale);
+      if (view.range) views.set(group.root, view);
+    }
+    return views;
+  }
+
+  restoreIndicatorScaleViews(views) {
+    for (const group of this.indicatorPaneGroups || []) {
+      const saved = views.get(group.root); if (!saved) continue;
+      const series = group.indicators.map(uid => this.indSeries.get(uid)?.[0]).find(Boolean);
+      if (!series) continue;
+      const scale = series.priceScale();
+      // Direction and scale mode belong to the current chart, not an old snapshot.
+      restoreScaleView(scale, { options: { ...scale.options(), autoScale: false, scaleMargins: saved.options.scaleMargins }, range: saved.range });
+    }
   }
 
   // "14 on RSI 14 (1D)": the numeric inputs, what it's built on, and its timeframe.
@@ -1335,6 +1384,7 @@ export class ChartPane {
   }
 
   destroy() {
+    this.viewport?.destroy();
     this.levelActions?.destroy();
     this.liveEvents?.abort();
     this.stopLive();

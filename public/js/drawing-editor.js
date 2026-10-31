@@ -23,6 +23,9 @@ export class DrawingEditor {
     pane.chartEl.style.touchAction = 'none';
     const on = (target, event, callback, options = {}) => target.addEventListener(event, callback, { signal: this.abort.signal, ...options });
     on(pane.chartEl, 'pointerdown', (e) => this.down(e), { capture: true, passive: false });
+    on(pane.chartEl, 'click', event => {
+      if (performance.now() < (this.rulerSuppressUntil || 0)) { event.preventDefault(); event.stopImmediatePropagation(); }
+    }, { capture: true });
     on(window, 'pointermove', (e) => this.move(e), { capture: true, passive: false });
     on(window, 'pointerup', (e) => this.up(e), { capture: true, passive: false });
     on(window, 'pointercancel', () => this.cancel(), { capture: true });
@@ -53,6 +56,16 @@ export class DrawingEditor {
   locked(item) { return !!(item.locked || this.app.settings.lockDrawings); }
   select(item) { this.app.setActive(this.pane); this.layer.selected = item; this.layer.update(); this.app.refreshDrawingControls?.(); }
   down(e) {
+    if (this.rulerGesture && e.pointerId !== this.rulerGesture.pointerId) { this.cancel(); return; }
+    if (this.app.tool === 'measure' && e.button === 0 && e.isPrimary !== false) {
+      const p = this.position(e), point = p && this.layer.projection.fromScreen(p.x, p.y);
+      if (!point) return;
+      this.app.setActive(this.pane); this.layer.selected = null;
+      const second = this.layer.temp?.type === 'measure';
+      if (!second) this.layer.temp = { id: uid(), type: 'measure', points: [point, { ...point }] };
+      this.rulerGesture = { pointerId: e.pointerId, start: p, moved: false, second };
+      e.preventDefault(); e.stopImmediatePropagation(); this.layer.update(); return;
+    }
     if (this.gesture && e.pointerId !== this.gesture.pointerId) { this.cancel(); return; }
     if (this.app.tool !== 'cursor' || e.button !== 0 || e.isPrimary === false) return;
     const p = this.position(e); if (!p) return;
@@ -70,6 +83,14 @@ export class DrawingEditor {
     }
   }
   move(e) {
+    if (this.rulerGesture?.pointerId === e.pointerId) {
+      const rect = this.pane.chartEl.getBoundingClientRect(), size = this.layer.size;
+      const p = { x: Math.max(0, Math.min(size.width, e.clientX - rect.left)), y: Math.max(0, Math.min(size.height, e.clientY - rect.top)) };
+      const point = this.layer.projection.fromScreen(p.x, p.y);
+      if (Math.hypot(p.x - this.rulerGesture.start.x, p.y - this.rulerGesture.start.y) > (e.pointerType === 'touch' ? 6 : 3)) this.rulerGesture.moved = true;
+      if (point && this.layer.temp) this.layer.temp.points[1] = point;
+      e.preventDefault(); e.stopImmediatePropagation(); this.layer.update(); return;
+    }
     const g = this.gesture;
     if (!g) {
       if (this.app.tool !== 'cursor' || e.pointerType === 'touch') return;
@@ -101,6 +122,18 @@ export class DrawingEditor {
     return g;
   }
   up(e) {
+    if (this.rulerGesture?.pointerId === e.pointerId) {
+      this.move(e);
+      const g = this.rulerGesture; this.rulerGesture = null;
+      this.rulerSuppressUntil = performance.now() + 400;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if ((g.moved || g.second) && this.layer.temp) {
+        const item = this.layer.temp; this.layer.temp = null; this.layer.items.push(item); this.layer.selected = item;
+        this.app.saveDrawings(this.pane.cfg.symbol, this.layer.items);
+        if (!this.app.settings.stayInDrawMode) this.app.setTool('cursor');
+      }
+      this.layer.update(); return;
+    }
     if (!this.gesture || this.gesture.pointerId !== e.pointerId) return;
     const g = this.finish();
     if (g.editable) { e.preventDefault(); e.stopImmediatePropagation(); }
@@ -119,6 +152,8 @@ export class DrawingEditor {
     this.layer.update();
   }
   cancel() {
+    this.rulerGesture = null;
+    if (this.layer.temp?.type === 'measure') this.layer.temp = null;
     const g = this.gesture;
     if (g?.editable) replace(g.hit.item, g.original);
     this.finish(); this.layer.update();

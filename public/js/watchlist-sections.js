@@ -1,8 +1,8 @@
 import { api, esc, ticker } from './api.js';
-import { sectionGroups, addSection, renameSection, toggleSection, removeSection, moveSymbol, moveSection, placeSectionBefore } from '../lib/watchlist-sections.js';
+import { sectionGroups, addSection, renameSection, toggleSection, removeSection, moveSymbol, placeSymbol, moveSection, placeSectionBefore } from '../lib/watchlist-sections.js';
 
 const chevron = '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
-export const MOVE_SYMBOL_ICON = '<svg viewBox="0 0 24 24"><path d="M3 6h12M3 12h8M3 18h12M15 9l4 3-4 3M11 12h8"/></svg>';
+export const MOVE_SYMBOL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="5" r="1"/><circle cx="16" cy="5" r="1"/><circle cx="8" cy="12" r="1"/><circle cx="16" cy="12" r="1"/><circle cx="8" cy="19" r="1"/><circle cx="16" cy="19" r="1"/></svg>';
 
 export class WatchlistSections {
   constructor(app, changed, flaggedView) { this.app = app; this.changed = changed; this.flaggedView = flaggedView; this.drag = null; }
@@ -25,10 +25,51 @@ export class WatchlistSections {
         <button class="wl-section-edit" data-section-action="settings" title="Edit ${esc(group.name)} section" aria-label="Edit ${esc(group.name)} section">⋯</button>
       </div><div class="wl-section-body ${group.collapsed ? 'hidden' : ''}" id="wl-section-${esc(group.id)}">${rows || '<div class="wl-section-empty">Use + to add a symbol, or move one here.</div>'}</div>`;
     }).join('');
-    return body ? '<div class="wl-ungrouped-drop" data-section="">Drop here: no section</div>' + body : '';
+    return body ? (hasSections ? '<div class="wl-ungrouped-drop" data-section="">Drop here: no section</div>' : '') + body : '';
   }
 
   bind(box) {
+    this.pointerAbort?.abort(); this.pointerAbort = new AbortController(); this.pointer = null;
+    box.addEventListener('click', event => {
+      if (this.suppressClick) { this.suppressClick = false; event.preventDefault(); event.stopImmediatePropagation(); }
+    }, true);
+    box.addEventListener('pointerdown', event => {
+      const handle = event.target.closest('.wl-move'), row = handle?.closest('.wl-row');
+      if (!row || this.flaggedView() || event.button !== 0 || event.isPrimary === false) return;
+      event.preventDefault(); event.stopPropagation();
+      this.pointer = { id: event.pointerId, handle, list: this.list, symbol: row.dataset.sym, x: event.clientX, y: event.clientY, moved: false };
+      this.drag = { list: this.list, symbol: row.dataset.sym };
+      handle.setPointerCapture(event.pointerId);
+    }, { capture: true, passive: false });
+    const pointerTarget = event => {
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.wl-row, .wl-section, .wl-ungrouped-drop');
+      return target && box.contains(target) ? target : null;
+    };
+    window.addEventListener('pointermove', event => {
+      const p = this.pointer; if (!p || p.id !== event.pointerId) return;
+      if (!p.moved && Math.hypot(event.clientX - p.x, event.clientY - p.y) < 6) return;
+      event.preventDefault(); p.moved = true; this.drag = { list: p.list, symbol: p.symbol }; box.classList.add('wl-dragging');
+      this.showDrop(box, pointerTarget(event), event.clientY);
+    }, { capture: true, passive: false, signal: this.pointerAbort.signal });
+    window.addEventListener('pointerup', event => {
+      const p = this.pointer; if (!p || p.id !== event.pointerId) return;
+      this.pointer = null; event.preventDefault();
+      if (p.handle.hasPointerCapture(event.pointerId)) p.handle.releasePointerCapture(event.pointerId);
+      this.suppressClick = true; setTimeout(() => { this.suppressClick = false; }, 0);
+      if (p.moved) this.drop(box, pointerTarget(event));
+      else { this.drag = null; this.move(p.symbol); }
+    }, { capture: true, passive: false, signal: this.pointerAbort.signal });
+    const cancelPointer = () => {
+      if (!this.pointer) return;
+      const p = this.pointer;
+      if (p.handle.hasPointerCapture(p.id)) p.handle.releasePointerCapture(p.id);
+      this.pointer = null; this.drag = null; box.classList.remove('wl-dragging'); this.changed();
+    };
+    window.addEventListener('pointercancel', cancelPointer, { capture: true, signal: this.pointerAbort.signal });
+    window.addEventListener('blur', cancelPointer, { signal: this.pointerAbort.signal });
+    window.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && this.pointer) { event.preventDefault(); event.stopImmediatePropagation(); cancelPointer(); }
+    }, { capture: true, signal: this.pointerAbort.signal });
     box.addEventListener('click', (event) => {
       const button = event.target.closest('[data-section-action]'); if (!button) return;
       const id = button.closest('.wl-section').dataset.section;
@@ -48,20 +89,33 @@ export class WatchlistSections {
       const target = event.target.closest('.wl-row, .wl-section, .wl-ungrouped-drop');
       if (!this.drag || this.drag.list !== this.list || !target) return;
       event.preventDefault(); event.dataTransfer.dropEffect = 'move';
-      box.querySelectorAll('.wl-drop-target').forEach((el) => el.classList.remove('wl-drop-target'));
-      target.classList.add('wl-drop-target');
+      this.showDrop(box, target, event.clientY);
     });
     box.addEventListener('drop', (event) => {
       const target = event.target.closest('.wl-row, .wl-section, .wl-ungrouped-drop'), drag = this.drag;
       if (!drag || drag.list !== this.list || !target) return;
       event.preventDefault();
-      try {
-        if (drag.symbol) moveSymbol(this.app.state, this.list, drag.symbol, target.dataset.section || '', target.dataset.sym);
-        else placeSectionBefore(this.app.state, this.list, drag.section, target.dataset.section);
-      } catch (error) { this.app.toast(error.message, 'err'); }
-      this.drag = null; box.classList.remove('wl-dragging'); this.changed();
+      this.drop(box, target);
     });
     box.addEventListener('dragend', () => { this.drag = null; box.classList.remove('wl-dragging'); this.changed(); });
+  }
+
+  showDrop(box, target, y) {
+    box.querySelectorAll('.wl-drop-target').forEach(el => el.classList.remove('wl-drop-target', 'wl-drop-after'));
+    if (!target) return;
+    const rect = target.getBoundingClientRect(), after = !!this.drag?.symbol && target.classList.contains('wl-row') && y > rect.top + rect.height / 2;
+    target.classList.add('wl-drop-target'); target.classList.toggle('wl-drop-after', after);
+  }
+  drop(box, target) {
+    const drag = this.drag;
+    if (drag && drag.list === this.list && target) {
+      try {
+        if (drag.symbol && target.dataset.sym) placeSymbol(this.app.state, this.list, drag.symbol, target.dataset.sym, target.classList.contains('wl-drop-after'));
+        else if (drag.symbol) moveSymbol(this.app.state, this.list, drag.symbol, target.dataset.section || '');
+        else placeSectionBefore(this.app.state, this.list, drag.section, target.dataset.section);
+      } catch (error) { this.app.toast(error.message, 'err'); }
+    }
+    this.drag = null; box.classList.remove('wl-dragging'); this.changed();
   }
 
   nameDialog(id = null) {
@@ -88,13 +142,21 @@ export class WatchlistSections {
 
   move(symbol) {
     const list = this.list, groups = this.groups, current = groups.find((group) => group.symbols.includes(symbol));
-    const card = this.app.modal(`Move ${ticker(symbol)}`, `<label class="field" style="display:flex">Section<select id="wlMoveSection">${groups.map((group) => `<option value="${esc(group.id)}" ${group.id === current?.id ? 'selected' : ''}>${esc(group.name || 'No section — top of list')}</option>`).join('')}</select></label><p class="down" data-section-error role="alert"></p>`, { foot: '<button class="btn" data-section-cancel>Cancel</button><button class="btn primary" data-section-move>Move</button>' });
+    if (!current) return;
+    const card = this.app.modal(`Move ${ticker(symbol)}`, `<div class="form-grid"><label class="field ${groups.length === 1 ? 'hidden' : ''}">Section<select id="wlMoveSection">${groups.map((group) => `<option value="${esc(group.id)}" ${group.id === current.id ? 'selected' : ''}>${esc(group.name || 'No section — top of list')}</option>`).join('')}</select></label><label class="field">Position<select id="wlMovePosition"></select></label></div><p class="hint-text">You can also drag the dotted handle beside an asset to put it above or below another.</p><p class="down" data-section-error role="alert"></p>`, { foot: '<button class="btn" data-section-cancel>Cancel</button><button class="btn primary" data-section-move>Move</button>' });
+    const section = card.querySelector('#wlMoveSection'), position = card.querySelector('#wlMovePosition');
+    const positions = (initial = false) => {
+      const group = groups.find(group => group.id === section.value), members = group.symbols.filter(item => item !== symbol);
+      const next = initial ? group.symbols[group.symbols.indexOf(symbol) + 1] || '' : '';
+      position.innerHTML = members.map(item => `<option value="${esc(item)}" ${item === next ? 'selected' : ''}>Before ${esc(ticker(item))}</option>`).join('') + `<option value="" ${!next ? 'selected' : ''}>${group.id ? 'Bottom of section' : 'Bottom of list'}</option>`;
+    };
+    positions(true); section.onchange = () => positions();
     card.querySelector('[data-section-cancel]').onclick = () => this.app.closeModal();
     card.querySelector('[data-section-move]').onclick = () => {
-      try { moveSymbol(this.app.state, list, symbol, card.querySelector('#wlMoveSection').value); this.changed(); this.app.closeModal(); }
+      try { moveSymbol(this.app.state, list, symbol, section.value, position.value || null); this.changed(); this.app.closeModal(); }
       catch (error) { card.querySelector('[data-section-error]').textContent = error.message; }
     };
-    card.querySelector('#wlMoveSection').focus();
+    (groups.length > 1 ? section : position).focus();
   }
 
   addSymbol(id) {

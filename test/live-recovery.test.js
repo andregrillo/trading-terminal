@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { api } from '../public/js/api.js';
+import { captureScaleView, restoreScaleView } from '../public/js/scale-view.js';
 
 globalThis.window = { LightweightCharts: { PriceScaleMode: { Normal: 0 } } };
 const { ChartPane } = await import('../public/js/chart.js');
@@ -11,6 +12,15 @@ test('volume draws missing values as gaps and preserves genuine zero-volume cand
   const pane = Object.create(ChartPane.prototype); pane.toChart = time => time;
   assert.deepEqual(pane.volPoint({ ...bar, volume: null }), { time: bar.time });
   assert.equal(pane.volPoint({ ...bar, volume: 0 }).value, 0);
+});
+
+test('switching assets or timeframes fits their own price scale while refreshing the same asset keeps manual zoom', () => {
+  const options = { autoScale: false };
+  const pane = Object.assign(Object.create(ChartPane.prototype), { main: { priceScale: () => ({ applyOptions: value => Object.assign(options, value) }) } });
+  pane.setPriceContext('BINANCE:VETUSDT', '1D'); assert.equal(options.autoScale, true);
+  options.autoScale = false; pane.setPriceContext('BINANCE:ADAUSDT', '1D'); assert.equal(options.autoScale, true);
+  options.autoScale = false; pane.setPriceContext('BINANCE:ADAUSDT', '1D'); assert.equal(options.autoScale, false);
+  pane.setPriceContext('BINANCE:ADAUSDT', '4h'); assert.equal(options.autoScale, true);
 });
 
 test('chart inversion changes scale direction, restores focused panes first and saves per chart', () => {
@@ -43,6 +53,84 @@ test('inversion keeps separate indicator scales linear while leaving price log m
   assert.deepEqual(calls, [['chart', { rightPriceScale: { invertScale: true } }], ['rsi', { mode: 0 }]]);
   assert.equal(pane.cfg.log, true);
 });
+
+function viewPane(range, { added = 0, replay = false, advanceReplay = false } = {}) {
+  let current = structuredClone(range);
+  const bars = Array.from({ length: 100 }, (_, time) => ({ ...bar, time }));
+  const next = Array.from({ length: 100 + added }, (_, time) => ({ ...bar, time }));
+  const pane = Object.assign(Object.create(ChartPane.prototype), {
+    cfg: { type: 'candles', compare: [], tf: '1D' }, app: { settings: { volume: false } },
+    mainType: 'candles', main: { applyOptions() {}, setData() {} }, shown: bars,
+    replay: replay ? {} : null,
+    visibleBars: () => { if (advanceReplay) next.at(-1).time += 1; return next; }, toChart: value => value,
+    chart: {
+      timeScale: () => ({ getVisibleLogicalRange: () => structuredClone(current), setVisibleLogicalRange: value => { current = value; } }),
+      applyOptions() {}, priceScale: () => ({ applyOptions() {} }),
+    },
+    // The native chart can move the time scale while indicator series are recreated.
+    renderCompare() {}, renderIndicators() { current = { from: 0, to: 160 }; },
+    drawings: { update() {} }, updateLegend() {},
+  });
+  return { pane, range: () => current };
+}
+
+test('background renders keep exact pan, zoom and empty space, including fewer than 20 bars', () => {
+  for (const range of [{ from: 70, to: 125 }, { from: 96, to: 108 }, { from: 15.25, to: 35.75 }]) {
+    const view = viewPane(range); view.pane.render(false); assert.deepEqual(view.range(), range);
+  }
+});
+
+test('new bars follow the latest candle without changing zoom or the chosen right spacing', () => {
+  const view = viewPane({ from: 70.5, to: 125.5 }, { added: 3 });
+  view.pane.render(false); assert.deepEqual(view.range(), { from: 73.5, to: 128.5 });
+});
+
+test('new bars leave historical and empty-future views in place', () => {
+  for (const range of [{ from: 10, to: 50 }, { from: 110, to: 150 }]) {
+    const view = viewPane(range, { added: 3 }); view.pane.render(false); assert.deepEqual(view.range(), range);
+  }
+});
+
+test('paused replay refreshes keep the view while a replay step follows the chosen candle', () => {
+  const range = { from: 15, to: 25 };
+  const paused = viewPane(range, { replay: true }); paused.pane.render(false); assert.deepEqual(paused.range(), range);
+  const step = viewPane(range, { replay: true, advanceReplay: true }); step.pane.render(false);
+  assert.deepEqual(step.range(), { from: 98, to: 108 }, 'replay follows a new step without imposing a minimum zoom width');
+  const reset = viewPane(range); reset.pane.render(true); assert.deepEqual(reset.range(), { from: 0, to: 108 });
+});
+
+test('manual indicator scales survive reconstruction and pane moves using stable indicator identities', () => {
+  const manual = { autoScale: false, mode: 0, invertScale: true, scaleMargins: { top: .1, bottom: .2 } };
+  const original = { priceScale: () => ({ options: () => manual, getVisibleRange: () => ({ from: 35, to: 65 }) }) };
+  const automatic = { priceScale: () => ({ options: () => ({ autoScale: true }) }) };
+  const pane = Object.assign(Object.create(ChartPane.prototype), {
+    indicatorPaneGroups: [{ root: 'rsi', index: 1, indicators: ['rsi'] }, { root: 'macd', index: 2, indicators: ['macd'] }],
+    indSeries: new Map([['rsi', [original]], ['macd', [automatic]]]),
+  });
+  const views = pane.captureIndicatorScaleViews(); assert.deepEqual([...views.keys()], ['rsi']);
+  manual.scaleMargins.top = .8;
+  let options, range;
+  pane.indSeries = new Map([['rsi', [{ priceScale: () => ({ options: () => ({ invertScale: true, mode: 0 }), applyOptions: value => { options = value; }, setVisibleRange: value => { range = value; } }) }]]]);
+  pane.indicatorPaneGroups.reverse(); pane.restoreIndicatorScaleViews(views);
+  assert.deepEqual(range, { from: 35, to: 65 }); assert.equal(options.scaleMargins.top, .1); assert.equal(options.invertScale, true);
+  pane.indSeries.clear(); assert.doesNotThrow(() => pane.restoreIndicatorScaleViews(views), 'hidden or removed plots must be ignored');
+});
+
+test('manual logarithmic scales round-trip stored coordinates without feeding real prices into a log range', () => {
+  const options = { mode: 1, autoScale: false, invertScale: true };
+  let raw = { from: 8.5, to: 9.5 }, setRange;
+  const scale = {
+    options: () => options, applyOptions: value => Object.assign(options, value),
+    getVisibleRange: () => options.mode === 1 ? { from: 10 ** raw.from, to: 10 ** raw.to } : { ...raw },
+    setVisibleRange: value => { setRange = value; raw = value; },
+  };
+  const saved = captureScaleView(scale);
+  assert.equal(options.mode, 1); assert.deepEqual(saved.range, raw);
+  raw = { from: 0, to: 1 }; restoreScaleView(scale, saved);
+  assert.deepEqual(setRange, { from: 8.5, to: 9.5 });
+  assert.equal(options.mode, 1); assert.equal(options.invertScale, true);
+});
+
 function setup(t, crypto = true) {
   const originals = Object.fromEntries(['window', 'document', 'WebSocket', 'setTimeout', 'clearTimeout'].map(key => [key, globalThis[key]]));
   const originalCandles = api.candles;

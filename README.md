@@ -65,6 +65,15 @@ the Mac. The watchlist checks every 5 seconds; chart polling checks every 3 seco
 for crypto and 10 seconds for other markets. Provider delays and cached candle
 responses still apply (daily and longer candle responses can be cached for a minute).
 Replay stays in its historical session when you return.
+Live updates and background indicator refreshes preserve your pan, zoom, right-hand
+spacing and manual indicator scales. New candles keep following the latest bar
+while it is visible; scrolling back through history keeps that view in place.
+Chart position, zoom, manual scales and pane sizes also save and return after a
+page reload. Views are kept separately for each chart, symbol, timeframe and chart
+type, with separate desktop and phone views. Temporary pane expansion and replay
+do not replace your saved normal view.
+Switching assets fits the new asset's price range, or restores that asset's own
+saved scale; it does not carry over the previous asset's prices.
 
 For calculated charts combining Binance USDT pairs, volume adds each asset's
 exchange-reported traded value in USDT for matching candles. The chart labels it
@@ -73,6 +82,15 @@ that calculated chart. Ordinary single-asset volume keeps its original units.
 If a fallback source lacks exact USDT turnover, the chart shows it as unavailable.
 
 ## Watchlists
+
+On desktop, drag the watchlist column's left edge to make it wider or narrower.
+The width saves automatically. Double-click the divider to reset it to the default.
+Phone watchlists keep their full-screen layout.
+
+Drag the dotted handle beside an asset to move it above or below another asset.
+You can also click or tap the handle and choose its position, including the bottom
+of the list. When sections are present, the same control can move assets between
+sections. The order saves automatically and returns after reloading.
 
 Use **+ Section** to create named groups within a watchlist. Drag symbols into a
 section, use a row's move button, or add symbols using the + beside a heading.
@@ -98,6 +116,10 @@ once with both names. The preview makes room for news from both assets. If one
 has no matching headlines or its news source is unavailable, the card says so.
 
 ## Drawing controls
+
+The ruler is the first tool in the left toolbar. Select it and drag across the
+chart, or click/tap two points, to measure price and percentage change, bars and
+elapsed time. Measurements save automatically and can be edited like other drawings.
 
 On desktop, double-click the background of the price pane or any indicator pane
 to expand it within that chart. Double-click again, click **Restore all panes**,

@@ -2,6 +2,18 @@
 
 All 13 drawing tools support selection, moving, editing and locking. Existing saved drawings work without conversion.
 
+The first tool in the left toolbar is **Ruler / measurement**. Select it, then
+drag between two points, or click/tap the start and end points separately. The
+shaded range shows signed price and percentage changes, the number of chart bars,
+and elapsed calendar time. Percentage is unavailable when the starting price is
+zero. By default, the ruler turns green for a price rise and red for a fall, including on
+inverted or logarithmic charts. Escape cancels an unfinished measurement.
+
+Measurements remain on the chart and save like other drawings. With the cursor
+tool, move them or adjust their endpoints; double-click/tap for colours, line
+thickness, fill, labels and coordinates. On a phone, open the pencil drawer to
+find the ruler at the top.
+
 - Use the cursor tool. Click or tap a drawing to select it.
 - Drag its body to move it. Drag a white handle to change its points. Rectangles have four corner handles. Parallel channels have a third point to change their width. Position drawings have entry, stop, target and width handles.
 - Double-click or double-tap a drawing to open its settings. You can also use the gear button beside the selected drawing, right-click it, or press Enter while it is selected.
@@ -39,3 +51,7 @@ The interaction design follows TradingView's public documentation, including [re
 `node --test test/drawings.test.js` checks geometry and movement for every tool, lock hit testing, rectangle/channel/position handles, logarithmic prices, Shift constraints, full-state snapshots and undo/redo. The standard `node scripts/check.js` includes these checks.
 
 Chrome browser checks used a separate temporary data folder. Actual mouse and emulated phone touch events verified moving, resizing, individual/global locks while panning, double-click/tap settings, applying and cancelling settings, duplication, deletion, undo/redo, persistence after reload and a phone-sized settings window. The user's saved state was not used for those edits.
+
+Ruler update, 31 October 2026: browser checks verified mouse dragging, two clicks,
+touch dragging, two taps, cancellation, saved styles, reloads and measurements on
+inverted scales. The existing measurement drawing ID is preserved for older saves.

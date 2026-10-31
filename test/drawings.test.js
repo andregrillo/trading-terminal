@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DrawingHistory, copyDrawings, drawingGeometry, drawingStyle, draggedDrawing, hitGeometry } from '../public/lib/drawing-model.js';
+import { DrawingHistory, copyDrawings, drawingGeometry, drawingStyle, draggedDrawing, hitGeometry, measurementStats, measurementDuration } from '../public/lib/drawing-model.js';
 import { DrawingLayer, TOOLS } from '../public/js/drawings.js';
 import { linePrice } from '../public/lib/backtest.js';
 
@@ -8,6 +8,28 @@ const size = { width: 800, height: 600 };
 const view = { x: t => t * 10, y: p => 500 - p * 10, fromScreen: (x, y) => ({ time: x / 10, price: (500 - y) / 10 }), logicalOf: t => t, formatPrice: p => p.toFixed(2) };
 const make = (type, more = {}) => ({ id: type, type, points: [{time:10,price:20},{time:30,price:30},{time:20,price:10}].slice(0, TOOLS.find(t=>t.id===type).points), ...more });
 const near = (a,b) => assert.ok(Math.abs(a-b)<1e-7, `${a} ≠ ${b}`);
+
+test('ruler is the first tool and keeps the existing measurement drawing identity', () => {
+  assert.equal(TOOLS[0].id, 'measure'); assert.equal(TOOLS[1].id, 'cursor');
+  assert.equal(TOOLS.filter(tool => tool.id === 'measure').length, 1);
+});
+test('ruler reports signed price/percent changes and separate bar count and elapsed time', () => {
+  const a = { time: 0, price: 100 }, b = { time: 3 * 86400, price: 125 };
+  assert.deepEqual(measurementStats(a, b, time => time ? 1 : 0), { change: 25, percent: 25, bars: 1, seconds: 259200 });
+  assert.deepEqual(measurementStats(b, a, time => time ? 1 : 0), { change: -25, percent: -20, bars: 1, seconds: 259200 });
+  assert.equal(measurementStats({ ...a, price: 0 }, b).percent, null);
+});
+test('measurement duration includes trading-session gaps and formats sub-minute through multi-day spans', () => {
+  assert.equal(measurementDuration(0), '0s'); assert.equal(measurementDuration(65), '1m 5s');
+  assert.equal(measurementDuration(90061), '1d 1h 1m 1s');
+});
+test('ruler labels show all measurements, handle a zero starting price and respect label visibility', () => {
+  const d = make('measure'); const g = drawingGeometry(d, view, size);
+  assert.ok(g.labels.some(label => label.text.includes('+10.00 (+50.00%)')));
+  assert.ok(g.labels.some(label => label.text.includes('20 bars') && label.text.includes('20s')));
+  d.points[0].price = 0; assert.ok(drawingGeometry(d, view, size).labels.some(label => label.text.includes('n/a')));
+  d.showLabels = false; assert.equal(drawingGeometry(d, view, size).labels.length, 0);
+});
 
 for (const tool of TOOLS.filter(t=>t.points)) {
   test(`${tool.label}: has geometry, selectable parts, and movable points`, () => {

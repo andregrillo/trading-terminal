@@ -1,9 +1,25 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {sectionGroups,addSection,renameSection,toggleSection,removeSection,moveSymbol,moveSection,placeSectionBefore,forgetSectionSymbol} from '../public/lib/watchlist-sections.js';
+import {sectionGroups,addSection,renameSection,toggleSection,removeSection,moveSymbol,placeSymbol,moveSection,placeSectionBefore,forgetSectionSymbol} from '../public/lib/watchlist-sections.js';
 import {watchlistSymbols} from '../public/lib/watchlist-flags.js';
 const make=()=>({watchlists:{Main:['BINANCE:BTCUSDT','BINANCE:ETHUSDT','US:SPY'],Other:['US:SPY']},activeWatchlist:'Main',symbolFlags:{'BINANCE:BTCUSDT':'red','US:SPY':'green'}});
 const btc='BINANCE:BTCUSDT',eth='BINANCE:ETHUSDT',spy='US:SPY';
+
+test('flat watchlists reorder upward, downward and to the final position without losing flags or membership',()=>{
+ const s=make(),flags=structuredClone(s.symbolFlags);
+ placeSymbol(s,'Main',btc,spy,true);assert.deepEqual(s.watchlists.Main,[eth,spy,btc]);
+ placeSymbol(s,'Main',btc,eth);assert.deepEqual(s.watchlists.Main,[btc,eth,spy]);
+ placeSymbol(s,'Main',eth,btc,true);assert.deepEqual(s.watchlists.Main,[btc,eth,spy],'dropping immediately after the preceding row is a no-op');
+ placeSymbol(s,'Main',eth,eth,true);assert.deepEqual(s.watchlists.Main,[btc,eth,spy]);
+ assert.deepEqual(s.symbolFlags,flags);assert.deepEqual(s.watchlists.Other,[spy]);
+});
+test('relative placement crosses sections, preserves hidden neighbours and survives saving',()=>{
+ const s=make(),a=addSection(s,'Main','A'),b=addSection(s,'Main','B');moveSymbol(s,'Main',btc,a);moveSymbol(s,'Main',eth,b);moveSymbol(s,'Main',spy,b);
+ placeSymbol(s,'Main',btc,eth,true);assert.deepEqual(sectionGroups(s)[2].symbols,[eth,btc,spy]);
+ placeSymbol(s,'Main',btc,spy,true);assert.deepEqual(sectionGroups(s)[2].symbols,[eth,spy,btc]);
+ const restored=JSON.parse(JSON.stringify(s));assert.deepEqual(restored.watchlists.Main,[eth,spy,btc]);assert.deepEqual(sectionGroups(restored)[2].symbols,[eth,spy,btc]);
+ const before=structuredClone(s);assert.throws(()=>placeSymbol(s,'Main',btc,'US:MISSING'));assert.deepEqual(s,before);
+});
 
 test('old flat watchlists display without conversion and empty named sections do not consume symbols',()=>{
  const s=make();assert.deepEqual(sectionGroups(s)[0].symbols,s.watchlists.Main);const before=structuredClone(s.watchlists);addSection(s,'Main','  Market cap  ');assert.equal(sectionGroups(s)[1].name,'Market cap');assert.deepEqual(sectionGroups(s)[1].symbols,[]);assert.deepEqual(s.watchlists,before);

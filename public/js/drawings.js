@@ -3,6 +3,8 @@ import { drawingGeometry, hitGeometry } from '../lib/drawing-model.js';
 // { time (UTC seconds), price } so drawings stay put when you change timeframe.
 
 export const TOOLS = [
+  { id: "measure", label: "Ruler / measurement", points: 2,
+    icon: '<path d="M3 16L16 3l5 5L8 21zM6 13l2 2M9 10l3 3M12 7l2 2M15 4l3 3"/>' },
   { id: "cursor", label: "Cursor", icon: '<path d="M5 3l14 7-6 2-2 6z"/>' },
   {
     id: "trend",
@@ -57,12 +59,6 @@ export const TOOLS = [
     label: "Fib retracement",
     points: 2,
     icon: '<path d="M3 5h18M3 10h18M3 14h18M3 19h18" stroke-dasharray="2 2"/>',
-  },
-  {
-    id: "measure",
-    label: "Price range / measure",
-    points: 2,
-    icon: '<path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/>',
   },
   {
     id: "long",

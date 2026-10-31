@@ -1,4 +1,6 @@
 // Temporary pane expansion shared by desktop and phone. Saved chart layouts stay unchanged.
+import { captureScaleView, restoreScaleView } from './scale-view.js';
+
 export function paneFocusIndex(pane, groups = pane.indicatorPaneGroups || []) {
   if (!pane.paneFocus) return null;
   if (pane.paneFocus === 'price') return 0;
@@ -66,12 +68,14 @@ export class PaneFocus {
   toggle(pane, key) {
     if (pane.paneFocus) return this.restore(pane);
     if (!pane.bars.length) return;
+    pane.viewport?.save();
     pane.drawingEditor.cancel(); pane.drawingEditor.select(null);
+    const priceView = captureScaleView(pane.main.priceScale());
     pane.paneFocusSnapshot = {
       mainStretch: pane.chart.panes()[0].getStretchFactor(),
       stretch: new Map((pane.indicatorPaneGroups || []).map(group => [group.root, pane.chart.panes()[group.index]?.getStretchFactor()])),
       mainVisible: pane.main.options().visible, volumeVisible: pane.volume?.options().visible,
-      priceOptions: structuredClone(pane.main.priceScale().options()), priceRange: pane.main.priceScale().getVisibleRange(),
+      priceOptions: priceView.options, priceRange: priceView.range,
     };
     pane.paneFocus = key;
     this.render(pane);
@@ -87,8 +91,7 @@ export class PaneFocus {
     const saved = pane.paneFocusSnapshot;
     pane.paneFocus = null;
     this.render(pane);
-    pane.main.priceScale().applyOptions(saved.priceOptions);
-    if (!saved.priceOptions.autoScale && saved.priceRange) pane.main.priceScale().setVisibleRange(saved.priceRange);
+    restoreScaleView(pane.main.priceScale(), { options: saved.priceOptions, range: saved.priceRange });
     delete pane.paneFocusSnapshot;
     this.shell.sync();
   }

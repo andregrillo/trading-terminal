@@ -11,6 +11,7 @@ import {
 import { parseTf, toCsv } from "../lib/series.js";
 import { initPanels } from "./panels.js";
 import { MobileUI } from "./mobile-ui.js";
+import { SidebarResize } from "./sidebar-resize.js";
 import { indicatorScaleLabelVisible, indicatorLevelLabelVisible } from "../lib/indicator-display.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -83,6 +84,7 @@ class App {
     await this.loadCustomIndicators();
     this.buildToolbar();
     this.buildDrawbar();
+    this.sidebarResize = new SidebarResize(this, document.querySelector('.side'));
     this.setLayout(this.state.layout, false);
     this.panels = initPanels(this);
     this.bindKeys();
@@ -275,8 +277,10 @@ class App {
     ).join("");
     $("#chartType").onchange = (e) => {
       this.mobileUI?.restorePane();
+      this.active.viewport?.beforeLoad();
       this.active.cfg.type = e.target.value;
-      this.active.render(true);
+      this.active.render(false);
+      this.active.viewport?.loaded();
       this.persist();
     };
     $("#symbolBtn").onclick = () => this.openSymbolSearch();
@@ -348,6 +352,8 @@ class App {
   }
 
   setTf(tf) {
+    this.mobileUI?.restorePane();
+    this.active.viewport?.save();
     this.active.cfg.tf = tf;
     this.active.load();
     this.syncToolbar();
@@ -357,6 +363,8 @@ class App {
   setSymbol(sym, pane = this.active) {
     const targets = this.settings.syncSymbol ? this.panes : [pane];
     for (const p of targets) {
+      this.mobileUI?.restorePane(p);
+      p.viewport?.save();
       p.cfg.symbol = sym;
       p.cfg.compare = p.cfg.compare.filter((s) => s !== sym);
       p.load();
@@ -370,7 +378,7 @@ class App {
     bar.innerHTML =
       TOOLS.map(
         (t, i) =>
-          `${i === 1 ? "<hr>" : ""}<button data-tool="${t.id}" title="${t.label}"><svg viewBox="0 0 24 24">${t.icon}</svg></button>`,
+          `${i === 2 ? "<hr>" : ""}<button data-tool="${t.id}" title="${t.label}" aria-label="${t.label}"><svg viewBox="0 0 24 24">${t.icon}</svg></button>`,
       ).join("") +
       '<hr><button data-act="undo" title="Undo drawing edit (⌘/Ctrl Z)" aria-label="Undo drawing edit">↶</button><button data-act="redo" title="Redo drawing edit (⌘/Ctrl Shift Z)" aria-label="Redo drawing edit">↷</button><button data-act="lock-all" title="Lock all drawings" aria-label="Lock all drawings" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></button><button data-act="alert" title="Alert when price crosses the selected line"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4zM10 20h4"/></svg></button>' +
       '<button data-act="delete" title="Delete selected drawing (Delete key)"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>' +
